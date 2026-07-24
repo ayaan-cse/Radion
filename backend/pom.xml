@@ -104,7 +104,7 @@
             <artifactId>spring-aspects</artifactId>
         </dependency>
 
-        <!-- Testing -->
+        <!-- Testing & Local Runtime -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

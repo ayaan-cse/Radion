@@ -41,6 +41,14 @@ export default function DashboardPage() {
     );
   }
 
+  if (!data) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-white/60">Loading session...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <header className="flex items-center justify-between w-full">

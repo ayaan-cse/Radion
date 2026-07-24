@@ -4,6 +4,8 @@ import "./globals.css";
 import { ToastProvider } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/Toast";
 
+import { NextAuthProvider } from "@/components/NextAuthProvider";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -19,10 +21,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ToastProvider>
-          {children}
-          <ToastContainer />
-        </ToastProvider>
+        <NextAuthProvider>
+          <ToastProvider>
+            {children}
+            <ToastContainer />
+          </ToastProvider>
+        </NextAuthProvider>
       </body>
     </html>
   );

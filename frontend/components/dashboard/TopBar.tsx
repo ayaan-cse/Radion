@@ -5,6 +5,7 @@ import { StatusDot } from "@/components/ui/StatusDot";
 import { NotificationPanel } from "./NotificationPanel";
 import { apiClient } from "@/lib/api";
 import { NotificationDTO } from "@/lib/types";
+import { useSession } from "next-auth/react";
 
 interface TopBarProps {
   lastSyncTime: string;
@@ -19,19 +20,22 @@ export function TopBar({
   onSync,
   isSyncing,
 }: TopBarProps) {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
 
   useEffect(() => {
-    if (isNotifOpen) {
+    if (isNotifOpen && userId) {
       apiClient
-        .getNotifications()
+        .getNotifications(userId)
         .then(setNotifications)
         .catch(console.error);
     }
-  }, [isNotifOpen]);
+  }, [isNotifOpen, userId]);
 
   const handleMarkAsRead = async (id: string) => {
+    if (!userId) return;
     await apiClient.markNotificationAsRead(id);
 
     setNotifications((prev) =>

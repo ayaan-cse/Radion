@@ -23,6 +23,7 @@ public class AIProcessingLog {
     @JoinColumn(name = "message_id")
     private Message message;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(columnDefinition = "JSONB")
     private String extractedJson;
 
