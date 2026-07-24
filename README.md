@@ -1,4 +1,6 @@
-# Radion - AI Productivity Dashboard
+# Radion
+
+AI That Organizes Your Life
 
 ## Prerequisites
 - Java 17+
