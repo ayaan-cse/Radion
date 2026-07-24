@@ -47,25 +47,28 @@ public class SyncManagerService {
      */
     @Transactional
     public void triggerManualSync(UUID userId) {
+        log.info("Manual sync request received for userId: {}", userId);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<ConnectedService> connections =
                 connectedServiceRepository.findByUserId(userId);
+                
+        log.info("Found {} connected integrations for userId: {}", connections.size(), userId);
 
         for (ConnectedService connection : connections) {
-
             IntegrationProvider provider =
                     providerMap.get(connection.getPlatform());
 
             if (provider != null) {
                 try {
+                    log.info("Sync started for platform {} and userId: {}", connection.getPlatform(), userId);
                     provider.sync(user, connection);
 
                     connection.setLastSyncAt(LocalDateTime.now());
-
                     connectedServiceRepository.save(connection);
+                    log.info("Sync completed for platform {} and userId: {}", connection.getPlatform(), userId);
 
                 } catch (Exception e) {
                     log.error(
@@ -77,6 +80,8 @@ public class SyncManagerService {
                 }
             }
         }
+        
+        log.info("Manual sync flow finished for userId: {}", userId);
     }
 
     /**
