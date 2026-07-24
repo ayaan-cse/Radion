@@ -20,7 +20,7 @@ const handler = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         // In production, we pass the JWT to Spring Boot for stateless auth
-        session.accessToken = token.jti; 
+        session.accessToken = token.jti as string; 
       }
       return session;
     },
