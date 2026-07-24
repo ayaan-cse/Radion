@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/radion_db
+    username: radion_user
+    password: radion_password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+radion:
+  ai:
+    provider: gemini # or openai
+    gemini:
+      api-key: ${GEMINI_API_KEY:mock-key}
+    openai:
+      api-key: ${OPENAI_API_KEY:mock-key}
+
+google:
+  client:
+    id: ${GOOGLE_CLIENT_ID:mock-client-id}
+    secret: ${GOOGLE_CLIENT_SECRET:mock-client-secret}
+  redirect:
+    uri: http://localhost:8080/api/integrations/google/callback
