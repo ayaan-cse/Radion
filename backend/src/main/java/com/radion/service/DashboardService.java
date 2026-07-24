@@ -4,5 +4,5 @@ import com.radion.dto.DashboardSummaryDTO;
 import java.util.UUID;
 
 public interface DashboardService {
-    DashboardSummaryDTO getDashboardSummary(UUID userId);
+    DashboardSummaryDTO getDashboardSummary(UUID userId, String searchQuery);
 }

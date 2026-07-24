@@ -78,8 +78,12 @@ public class EventEngine {
 
         // 4. Sync to Google Calendar
         try {
-            String gCalId = calendarSyncService.syncEvent(user, calendarDTO, eventToSave.getGoogleCalendarEventId());
-            eventToSave.setGoogleCalendarEventId(gCalId);
+            if (eventToSave.getGoogleCalendarEventId() != null) {
+                calendarSyncService.updateEvent(user, eventToSave.getGoogleCalendarEventId(), calendarDTO);
+            } else {
+                String gCalId = calendarSyncService.syncEvent(user, calendarDTO);
+                eventToSave.setGoogleCalendarEventId(gCalId);
+            }
             eventRepository.save(eventToSave);
         } catch (Exception e) {
             log.error("Failed to sync event {} to Google Calendar", eventToSave.getId(), e);

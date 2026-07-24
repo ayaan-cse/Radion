@@ -36,7 +36,17 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
 
     @Override
     @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 2000))
-    public String syncEvent(User user, CalendarEventDTO dto, String existingGoogleEventId) {
+    public String syncEvent(User user, CalendarEventDTO dto) {
+        return doSyncEvent(user, dto, null);
+    }
+
+    @Override
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    public void updateEvent(User user, String googleCalendarEventId, CalendarEventDTO dto) {
+        doSyncEvent(user, dto, googleCalendarEventId);
+    }
+
+    private String doSyncEvent(User user, CalendarEventDTO dto, String existingGoogleEventId) {
         ConnectedService googleConnection = connectedServiceRepository
                 .findByUserId(user.getId()).stream()
                 .filter(c -> c.getPlatform() == Platform.GMAIL) // Gmail connection holds the Google token

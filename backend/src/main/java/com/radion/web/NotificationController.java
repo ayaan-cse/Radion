@@ -32,7 +32,7 @@ public class NotificationController {
 
         List<NotificationDTO> dtos = notifications.stream().map(n -> NotificationDTO.builder()
                 .id(n.getId().toString())
-                .title(n.getTitle())
+                .title("New Notification")
                 .content(n.getContent())
                 .timestamp(formatRelativeTime(n.getCreatedAt()))
                 .isRead(n.isRead())

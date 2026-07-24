@@ -65,8 +65,8 @@ public class InformationCollectionEngine {
         }
 
         // 4. Automation Decision
-        AutomationEngine.ActionDecision decision = automationEngine.decideAction(extractionResult);
-        automationEngine.executeDecision(decision, normalizedMessage, extractionResult);
+        // AutomationEngine.ActionDecision decision = automationEngine.decideAction(extractionResult);
+        // automationEngine.executeDecision(decision, normalizedMessage, extractionResult);
         
         // Note: AIProcessingLog entity creation will happen here to populate the 
         // "Recent AI Processed Messages" card on the frontend.
