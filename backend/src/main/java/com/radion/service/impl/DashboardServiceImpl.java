@@ -134,6 +134,7 @@ public class DashboardServiceImpl implements DashboardService {
         return ConnectionDTO.builder()
                 .platform(c.getPlatform())
                 .status(c.getStatus().name())
+                .lastSyncAt(formatRelativeTime(c.getLastSyncAt()))
                 .build();
     }
 
@@ -180,6 +181,9 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private String formatRelativeTime(LocalDateTime time) {
+        if (time == null) {
+            return "Never";
+        }
 
         long minutes = java.time.Duration
                 .between(time, LocalDateTime.now())
@@ -189,13 +193,13 @@ public class DashboardServiceImpl implements DashboardService {
             return "Just now";
 
         if (minutes < 60)
-            return minutes + "m ago";
+            return "Synced " + minutes + "m ago";
 
         long hours = minutes / 60;
 
         if (hours < 24)
-            return hours + "h ago";
+            return "Synced " + hours + "h ago";
 
-        return (hours / 24) + "d ago";
+        return "Synced " + (hours / 24) + "d ago";
     }
 }

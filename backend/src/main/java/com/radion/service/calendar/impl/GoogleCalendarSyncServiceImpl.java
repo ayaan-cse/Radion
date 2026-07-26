@@ -49,7 +49,7 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
     private String doSyncEvent(User user, CalendarEventDTO dto, String existingGoogleEventId) {
         ConnectedService googleConnection = connectedServiceRepository
                 .findByUserId(user.getId()).stream()
-                .filter(c -> c.getPlatform() == Platform.GMAIL) // Gmail connection holds the Google token
+                .filter(c -> c.getPlatform() == Platform.GMAIL || c.getPlatform() == Platform.GOOGLE_CALENDAR) // Google connections hold the Google token
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("No Google connection found for user"));
 

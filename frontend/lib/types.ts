@@ -1,5 +1,5 @@
 export type EventCategory = 'INTERVIEW' | 'TASK' | 'DEADLINE' | 'MEETING';
-export type Platform = 'GMAIL' | 'WHATSAPP' | 'CLASSROOM';
+export type Platform = 'GMAIL' | 'GOOGLE_CALENDAR' | 'WHATSAPP' | 'CLASSROOM' | 'OUTLOOK' | 'SLACK';
 
 export interface EventDTO {
   id: string;
@@ -31,6 +31,7 @@ export interface MessageDTO {
 export interface ConnectionDTO {
   platform: Platform;
   status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  lastSyncAt?: string;
 }
 
 // --- THIS IS THE NEW PART FOR PHASE 7 ---

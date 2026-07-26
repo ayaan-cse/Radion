@@ -7,16 +7,22 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.radion.domain.enums.ConnectionStatus;
+import com.radion.domain.enums.Platform;
 import com.radion.domain.models.ConnectedService;
 import com.radion.repository.ConnectedServiceRepository;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -34,31 +40,94 @@ public class GoogleOAuthServiceImpl {
     @Value("${google.redirect.uri}")
     private String redirectUri;
 
-    // Scopes required for Gmail and Classroom
-    private static final java.util.Collection<String> SCOPES = Arrays.asList(
-            "https://www.googleapis.com/auth/gmail.readonly",
+    // Granular Scopes required for each integration platform
+    private static final Collection<String> GMAIL_SCOPES = Collections.singletonList(
+            "https://www.googleapis.com/auth/gmail.readonly"
+    );
+
+    private static final Collection<String> CLASSROOM_SCOPES = Arrays.asList(
             "https://www.googleapis.com/auth/classroom.courses.readonly",
             "https://www.googleapis.com/auth/classroom.coursework.me.readonly"
     );
 
-    private GoogleAuthorizationCodeFlow getFlow() {
+    private static final Collection<String> CALENDAR_SCOPES = Arrays.asList(
+            "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/calendar"
+    );
+
+    @Data
+    @AllArgsConstructor
+    public static class OAuthStatePayload {
+        private Platform platform;
+        private UUID userId;
+        private long createdAtMillis;
+
+        public boolean isExpired() {
+            // Expire after 15 minutes (900,000 ms)
+            return System.currentTimeMillis() - createdAtMillis > 15 * 60 * 1000L;
+        }
+    }
+
+    private final Map<String, OAuthStatePayload> stateStore = new ConcurrentHashMap<>();
+
+    public String generateAndStoreStateToken(Platform platform, UUID userId) {
+        byte[] randomBytes = new byte[32];
+        new SecureRandom().nextBytes(randomBytes);
+        String stateToken = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+
+        stateStore.put(stateToken, new OAuthStatePayload(platform, userId, System.currentTimeMillis()));
+
+        // Clean up old expired tokens occasionally to prevent memory leaks
+        stateStore.entrySet().removeIf(entry -> entry.getValue().isExpired());
+
+        return stateToken;
+    }
+
+    public OAuthStatePayload validateAndConsumeStateToken(String stateToken) {
+        if (!StringUtils.hasText(stateToken)) {
+            throw new IllegalArgumentException("Missing state token");
+        }
+        OAuthStatePayload payload = stateStore.remove(stateToken); // consume single-use token
+        if (payload == null || payload.isExpired()) {
+            throw new SecurityException("Invalid or expired OAuth state token. Possible CSRF attack.");
+        }
+        return payload;
+    }
+
+    public Collection<String> getScopesForPlatform(Platform platform) {
+        if (platform == null) return Collections.emptyList();
+        return switch (platform) {
+            case GMAIL -> GMAIL_SCOPES;
+            case GOOGLE_CALENDAR -> CALENDAR_SCOPES;
+            case CLASSROOM -> CLASSROOM_SCOPES;
+            default -> Collections.emptyList();
+        };
+    }
+
+    private GoogleAuthorizationCodeFlow getFlow(Collection<String> scopes) {
         return new GoogleAuthorizationCodeFlow.Builder(
-                new NetHttpTransport(), GsonFactory.getDefaultInstance(), clientId, clientSecret, SCOPES)
+                new NetHttpTransport(), GsonFactory.getDefaultInstance(), clientId, clientSecret, scopes)
                 .setAccessType("offline") // Required to get a refresh token
                 .setApprovalPrompt("force")
                 .build();
     }
 
-    public String generateAuthorizationUrl(String state) {
-        return getFlow().newAuthorizationUrl()
+    public String generateAuthorizationUrl(String stateToken, Platform platform) {
+        Collection<String> scopes = getScopesForPlatform(platform);
+        if (scopes.isEmpty()) {
+            throw new IllegalArgumentException("No OAuth scopes defined for platform: " + platform);
+        }
+        return getFlow(scopes).newAuthorizationUrl()
                 .setRedirectUri(redirectUri)
-                .setState(state)
+                .setState(stateToken)
                 .build();
     }
 
     public void exchangeCodeForTokens(String code, ConnectedService connection) {
         try {
-            GoogleTokenResponse response = getFlow().newTokenRequest(code)
+            Collection<String> scopes = getScopesForPlatform(connection.getPlatform());
+            GoogleTokenResponse response = getFlow(scopes).newTokenRequest(code)
                     .setRedirectUri(redirectUri)
                     .execute();
 
@@ -68,10 +137,10 @@ public class GoogleOAuthServiceImpl {
             }
             connection.setTokenExpiresAt(LocalDateTime.now().plusSeconds(response.getExpiresInSeconds()));
             connection.setStatus(ConnectionStatus.CONNECTED);
-            
+
             connectedServiceRepository.save(connection);
             log.info("Successfully exchanged code for tokens for connection: {}", connection.getId());
-            
+
         } catch (IOException e) {
             log.error("Failed to exchange Google OAuth code", e);
             connection.setStatus(ConnectionStatus.ERROR);

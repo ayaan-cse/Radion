@@ -8,4 +8,5 @@ import lombok.Data;
 public class ConnectionDTO {
     private Platform platform;
     private String status;
+    private String lastSyncAt;
 }

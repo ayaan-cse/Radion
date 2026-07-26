@@ -76,6 +76,7 @@ export default function DashboardPage() {
       <ConnectedServices
         connections={data?.connections || []}
         isLoading={isLoading}
+        lastSyncTime={data?.lastSyncTime}
       />
 
       <motion.div
