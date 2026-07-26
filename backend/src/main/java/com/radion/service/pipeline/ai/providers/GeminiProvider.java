@@ -21,9 +21,14 @@ public class GeminiProvider implements LLMProvider {
     @Value("${radion.ai.gemini.api-key}")
     private String apiKey;
 
+    @Value("${radion.ai.gemini.model:gemini-flash-latest}")
+    private String model;
+
+
     @Override
     public String generateText(String prompt) {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

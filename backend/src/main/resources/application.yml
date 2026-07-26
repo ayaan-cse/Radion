@@ -21,7 +21,10 @@ radion:
     provider: gemini # or openai
     gemini:
       api-key: ${GEMINI_API_KEY:mock-key}
+      model: ${GEMINI_MODEL:gemini-flash-latest}
+
     openai:
+
       api-key: ${OPENAI_API_KEY:mock-key}
 
 google:
