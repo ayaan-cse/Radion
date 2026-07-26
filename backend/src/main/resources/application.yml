@@ -15,6 +15,8 @@ server:
   port: 8080
 
 radion:
+  security:
+    encryption-key: ${ENCRYPTION_KEY}
   ai:
     provider: gemini # or openai
     gemini:
@@ -27,4 +29,4 @@ google:
     id: ${GOOGLE_CLIENT_ID:mock-client-id}
     secret: ${GOOGLE_CLIENT_SECRET:mock-client-secret}
   redirect:
-    uri: http://localhost:8080/api/integrations/google/callback
+    uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/integrations/google/callback}

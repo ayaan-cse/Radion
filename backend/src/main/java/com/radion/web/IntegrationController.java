@@ -73,10 +73,10 @@ public class IntegrationController {
             // Trigger an immediate initial sync for the newly connected service
             syncManagerService.triggerManualSync(userId);
 
-            return new RedirectView(frontendUrl + "/?connection=success&platform=" + platform.name());
+            return new RedirectView(frontendUrl + "/integrations?connection=success&platform=" + platform.name());
         } catch (Exception e) {
             log.error("Error during Google OAuth callback processing: {}", e.getMessage(), e);
-            return new RedirectView(frontendUrl + "/?connection=error&reason=csrf_or_oauth_failed");
+            return new RedirectView(frontendUrl + "/integrations?connection=error&reason=csrf_or_oauth_failed");
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.radion.domain.models;
 
+import com.radion.domain.enums.MessageClassification;
+import com.radion.domain.enums.MessageProcessingState;
 import com.radion.domain.enums.Platform;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,10 +24,25 @@ public class Message {
     
     private String externalId;
     private String title;
+    private String sender;
+    
+    @Column(columnDefinition = "TEXT")
+    private String snippet;
+    
+    @Column(columnDefinition = "TEXT")
+    private String labels;
     
     @Column(columnDefinition = "TEXT")
     private String rawPayload;
     
     private boolean isUnread;
     private LocalDateTime receivedAt;
+
+    @Enumerated(EnumType.STRING)
+    private MessageProcessingState processingState;
+
+    @Enumerated(EnumType.STRING)
+    private MessageClassification classification;
+
+    private Integer trustScore;
 }

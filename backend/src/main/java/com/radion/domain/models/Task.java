@@ -29,4 +29,7 @@ public class Task {
     private LocalDateTime dueDate;
 
     private boolean isCompleted;
-}
+
+    @Column(name = "business_key")
+    private String businessKey;
+}

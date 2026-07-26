@@ -6,7 +6,7 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/useToast";
 import { Platform } from "@/lib/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface IntegrationCardProps {
   id: Platform;
@@ -110,6 +110,23 @@ export default function IntegrationsPage() {
   const { data: session } = useSession();
   const { addToast } = useToast();
   const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const connection = params.get("connection");
+    const platform = params.get("platform");
+    const reason = params.get("reason");
+
+    if (connection === "success") {
+      addToast(`Successfully connected ${platform || "service"}!`, "success");
+      triggerSync();
+      window.history.replaceState({}, "", "/integrations");
+    } else if (connection === "error") {
+      addToast(`Failed to connect integration: ${reason || "error"}`, "error");
+      window.history.replaceState({}, "", "/integrations");
+    }
+  }, [addToast, triggerSync]);
 
   const handleConnect = (platform: Platform) => {
     if (!userId) {

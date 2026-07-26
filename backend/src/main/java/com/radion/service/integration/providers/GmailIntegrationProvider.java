@@ -6,18 +6,22 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePartHeader;
 import com.radion.domain.enums.Platform;
 import com.radion.domain.models.ConnectedService;
 import com.radion.domain.models.User;
+import com.radion.repository.MessageRepository;
 import com.radion.service.integration.IntegrationProvider;
 import com.radion.service.integration.oauth.GoogleOAuthServiceImpl;
-import com.radion.service.pipeline.InformationCollectionEngine;
-import com.radion.service.pipeline.models.RawPayload;
+import com.radion.service.pipeline.placement.PlacementPipelineOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.ZoneId;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -26,7 +30,8 @@ import java.util.List;
 public class GmailIntegrationProvider implements IntegrationProvider {
 
     private final GoogleOAuthServiceImpl googleOAuthService;
-    private final InformationCollectionEngine pipelineEngine; // From Step 6B
+    private final PlacementPipelineOrchestrator placementPipelineOrchestrator;
+    private final MessageRepository messageRepository;
 
     @Override
     public Platform getPlatform() {
@@ -69,24 +74,61 @@ public class GmailIntegrationProvider implements IntegrationProvider {
                 return;
             }
 
-            // 3. Fetch Full Message Payloads and push to AI Pipeline
+            int newEmailsCount = 0;
+            // 3. Fetch Message Metadata and persist to database
             for (Message msgRef : messages) {
-                Message fullMessage = gmailService.users().messages().get("me", msgRef.getId())
-                        .setFormat("full")
+                Message metadataMessage = gmailService.users().messages().get("me", msgRef.getId())
+                        .setFormat("metadata")
+                        .setMetadataHeaders(Arrays.asList("Subject", "From"))
                         .execute();
 
-                // Convert to our RawPayload format and send to the Information Collection Engine
-                RawPayload payload = RawPayload.builder()
-                        .externalMessageId(fullMessage.getId())
-                        .platform(Platform.GMAIL)
-                        .rawJsonContent(fullMessage.toPrettyString()) // Pass raw JSON to the Parser
-                        .build();
+                var existingOpt = messageRepository.findByUserIdAndExternalId(user.getId(), metadataMessage.getId());
+                if (existingOpt.isEmpty()) {
+                    String subject = "No Subject";
+                    String sender = "Unknown Sender";
+                    if (metadataMessage.getPayload() != null && metadataMessage.getPayload().getHeaders() != null) {
+                        for (MessagePartHeader header : metadataMessage.getPayload().getHeaders()) {
+                            if ("Subject".equalsIgnoreCase(header.getName())) {
+                                subject = header.getValue();
+                            } else if ("From".equalsIgnoreCase(header.getName())) {
+                                sender = header.getValue();
+                            }
+                        }
+                    }
 
-                // This triggers the Parser -> AI Engine -> Automation Engine flow
-                pipelineEngine.processRawPayload(payload);
+                    boolean isUnread = metadataMessage.getLabelIds() != null && metadataMessage.getLabelIds().contains("UNREAD");
+                    String labelsStr = metadataMessage.getLabelIds() != null ? String.join(",", metadataMessage.getLabelIds()) : "";
+                    
+                    LocalDateTime receivedAt = LocalDateTime.now();
+                    if (metadataMessage.getInternalDate() != null) {
+                        receivedAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(metadataMessage.getInternalDate()), ZoneId.systemDefault());
+                    }
+
+                    com.radion.domain.models.Message dbMessage = com.radion.domain.models.Message.builder()
+                            .user(user)
+                            .platform(Platform.GMAIL)
+                            .externalId(metadataMessage.getId())
+                            .title(subject)
+                            .sender(sender)
+                            .snippet(metadataMessage.getSnippet())
+                            .labels(labelsStr)
+                            .isUnread(isUnread)
+                            .receivedAt(receivedAt)
+                            .build();
+
+                    dbMessage = messageRepository.save(dbMessage);
+                    newEmailsCount++;
+
+                    // 4. Trigger Placement Intelligence Pipeline
+                    try {
+                        placementPipelineOrchestrator.processMessage(dbMessage);
+                    } catch (Exception e) {
+                        log.error("Error running Placement Intelligence Pipeline for message {}", dbMessage.getId(), e);
+                    }
+                }
             }
 
-            log.info("Successfully synced {} emails for user: {}", messages.size(), user.getId());
+            log.info("Successfully fetched {} emails and stored {} new emails in database for user: {}", messages.size(), newEmailsCount, user.getId());
 
         } catch (Exception e) {
             log.error("Gmail API sync failed for user: {}", user.getId(), e);

@@ -139,7 +139,7 @@ public class GoogleOAuthServiceImpl {
             connection.setStatus(ConnectionStatus.CONNECTED);
 
             connectedServiceRepository.save(connection);
-            log.info("Successfully exchanged code for tokens for connection: {}", connection.getId());
+            log.info("Successfully exchanged code for tokens for connection: {}. Token expiry persisted: {}", connection.getId(), connection.getTokenExpiresAt());
 
         } catch (IOException e) {
             log.error("Failed to exchange Google OAuth code", e);
@@ -171,7 +171,7 @@ public class GoogleOAuthServiceImpl {
             connection.setTokenExpiresAt(LocalDateTime.now().plusSeconds(response.getExpiresInSeconds()));
             connectedServiceRepository.save(connection);
             
-            log.info("Successfully refreshed access token for connection: {}", connection.getId());
+            log.info("Successfully refreshed access token for connection: {}. New token expiry persisted: {}", connection.getId(), connection.getTokenExpiresAt());
             return true;
             
         } catch (TokenResponseException e) {

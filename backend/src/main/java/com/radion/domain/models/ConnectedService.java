@@ -27,9 +27,11 @@ public class ConnectedService {
     private LocalDateTime lastSyncAt;
 
     @Column(length = 2048)
+    @Convert(converter = TokenEncryptionConverter.class)
     private String accessToken;
     
     @Column(length = 2048)
+    @Convert(converter = TokenEncryptionConverter.class)
     private String refreshToken;
     
     private LocalDateTime tokenExpiresAt;
