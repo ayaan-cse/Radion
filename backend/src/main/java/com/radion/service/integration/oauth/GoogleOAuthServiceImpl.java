@@ -231,7 +231,7 @@ public class GoogleOAuthServiceImpl {
 
     public boolean refreshUserAccessToken(com.radion.domain.models.User user) {
         if (user.getGoogleTokenExpiresAt() != null && user.getGoogleTokenExpiresAt().isAfter(LocalDateTime.now().plusMinutes(5))) {
-            return true;
+            return true; // Token is still valid
         }
         if (user.getGoogleRefreshToken() == null) {
             log.warn("No refresh token available for user: {}", user.getId());
@@ -244,13 +244,34 @@ public class GoogleOAuthServiceImpl {
                     .execute();
             user.setGoogleAccessToken(response.getAccessToken());
             user.setGoogleTokenExpiresAt(LocalDateTime.now().plusSeconds(response.getExpiresInSeconds()));
-            // Note: UserRepository save needs to be done by the caller, or injected here.
-            // Since we need to save it, let's inject UserRepository or let the caller save it.
-            // Let's modify the caller to save it, or inject UserRepository here.
+            log.info("Successfully refreshed Dashboard token for user: {}", user.getId());
             return true;
-        } catch (Exception e) {
-            log.error("Failed to refresh user access token for user: {}", user.getId(), e);
+        } catch (TokenResponseException e) {
+            // invalid_grant = permanent failure — user must re-authenticate via Dashboard
+            String errorCode = e.getDetails() != null ? e.getDetails().getError() : "unknown";
+            log.error("[REAUTH_REQUIRED] Dashboard OAuth token permanently invalid for user: {}. " +
+                      "Error: {}. User must reconnect via Dashboard login. " +
+                      "Likely cause: OAuth app in Testing mode (tokens expire after 7 days) " +
+                      "or user revoked access.",
+                      user.getId(), errorCode);
+            // Clear invalid tokens so the frontend knows the user needs to re-login
+            user.setGoogleAccessToken(null);
+            user.setGoogleRefreshToken(null);
+            user.setGoogleTokenExpiresAt(null);
+            throw new InvalidGrantException("Dashboard Google token invalid (" + errorCode + "). Re-authentication required.");
+        } catch (IOException e) {
+            log.error("Network error refreshing Dashboard token for user: {}", user.getId(), e);
             return false;
+        }
+    }
+
+    /**
+     * Thrown when Google returns invalid_grant — permanent, not retryable.
+     * The user must log out and log back in via the Dashboard to issue a fresh token.
+     */
+    public static class InvalidGrantException extends RuntimeException {
+        public InvalidGrantException(String message) {
+            super(message);
         }
     }
 }

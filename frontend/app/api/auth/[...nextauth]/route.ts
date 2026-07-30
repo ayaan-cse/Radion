@@ -26,7 +26,7 @@ const handler = NextAuth({
         console.log("Received account.refresh_token: ", !!account.refresh_token);
         
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/sync`, {
+          const res = await fetch(`${process.env.INTERNAL_API_URL}/auth/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

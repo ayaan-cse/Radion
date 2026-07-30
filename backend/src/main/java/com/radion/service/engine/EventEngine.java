@@ -6,6 +6,7 @@ import com.radion.domain.models.User;
 import com.radion.repository.EventRepository;
 import com.radion.service.calendar.GoogleCalendarSyncService;
 import com.radion.service.calendar.dto.CalendarEventDTO;
+import com.radion.service.integration.oauth.GoogleOAuthServiceImpl;
 import com.radion.service.pipeline.models.AIExtractionResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +65,17 @@ public class EventEngine {
             if (gCalId != null) {
                 event.setGoogleCalendarEventId(gCalId);
             }
-            
+
+            // InvalidGrantException = permanent, no retry — user must re-login
+            if (syncException instanceof GoogleOAuthServiceImpl.InvalidGrantException) {
+                log.error("Event {} marked REAUTH_REQUIRED: Google OAuth token is invalid. User must re-login.", eventId);
+                event.setCalendarSyncStatus("REAUTH_REQUIRED");
+                event.setCalendarSyncError(syncException.getMessage());
+                event.setNextRetryAt(null);
+                eventRepository.save(event);
+                return;
+            }
+
             String error = syncException != null ? syncException.getMessage() : null;
             if (error != null && error.length() > 2000) {
                 event.setCalendarSyncError(error.substring(0, 2000) + "...");
@@ -82,7 +93,7 @@ public class EventEngine {
             } else {
                 event.setCalendarSyncStatus(status);
             }
-            
+
             eventRepository.save(event);
         });
     }
@@ -99,7 +110,13 @@ public class EventEngine {
                               lowerError.contains("timeout") || 
                               lowerError.contains("connection") ||
                               lowerError.contains("refresh") ||
-                              lowerError.contains("socket");
+                              lowerError.contains("socket") ||
+                              lowerError.contains("no session") ||           // Hibernate LazyLoad outside TX
+                              lowerError.contains("session") ||              // Hibernate session closed
+                              lowerError.contains("could not initialize proxy") || // LazyInitializationException
+                              lowerError.contains("failed to lazily initialize") || // LazyInitializationException
+                              lowerError.contains("service unavailable") ||
+                              lowerError.contains("network");
 
         if (isTemporary) {
             int currentRetry = event.getRetryCount() != null ? event.getRetryCount() : 0;

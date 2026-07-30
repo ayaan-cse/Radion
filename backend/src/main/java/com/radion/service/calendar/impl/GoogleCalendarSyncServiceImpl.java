@@ -78,13 +78,20 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
     }
 
     private String doSyncEvent(User user, CalendarEventDTO dto, String existingGoogleEventId) {
-        if (user.getGoogleAccessToken() == null) {
-            log.info("Skipping Google Calendar sync: User {} has not connected Google Calendar via Dashboard", user.getId());
+        if (user.getGoogleAccessToken() == null && user.getGoogleRefreshToken() == null) {
+            log.info("Skipping Google Calendar sync: User {} has not connected Google Calendar via Dashboard login", user.getId());
             return null;
         }
 
-        if (!googleOAuthService.refreshUserAccessToken(user)) {
-            throw new RuntimeException("Failed to refresh Google token for User " + user.getId());
+        try {
+            if (!googleOAuthService.refreshUserAccessToken(user)) {
+                throw new RuntimeException("Failed to refresh Google token for User " + user.getId());
+            }
+        } catch (GoogleOAuthServiceImpl.InvalidGrantException e) {
+            // Permanent OAuth failure — propagate so EventEngine marks REAUTH_REQUIRED, not FAILED
+            log.error("Calendar sync aborted for user {}: {}", user.getId(), e.getMessage());
+            userRepository.save(user); // persist cleared tokens
+            throw e;
         }
         userRepository.save(user);
 
@@ -122,7 +129,7 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
             // 3. Color Coding
             googleEvent.setColorId(getColorIdForCategory(dto.getCategory(), dto.isRegistration()));
 
-            // 4. Dynamic Multi-Stage Reminders (Intelligently spaced based on deadline distance)
+            // 4. Dynamic Multi-Stage Reminders
             if (dto.isRequiresReminders()) {
                 Event.Reminders reminders = new Event.Reminders().setUseDefault(false);
                 reminders.setOverrides(calculateDynamicReminders(dto.getStartTime(), dto.isRegistration()));
@@ -149,6 +156,8 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
                 return createdEvent.getId();
             }
 
+        } catch (GoogleOAuthServiceImpl.InvalidGrantException e) {
+            throw e; // Already logged, propagate as-is
         } catch (Exception e) {
             log.error("Google Calendar API failure for user: {}", user.getId(), e);
             throw new RuntimeException("Calendar sync failed", e);
