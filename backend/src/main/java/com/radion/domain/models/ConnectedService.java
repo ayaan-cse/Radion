@@ -36,4 +36,10 @@ public class ConnectedService {
     
     private LocalDateTime tokenExpiresAt;
     private String externalAccountId;
+    private String accountEmail;
+    private String accountName;
+    private String accountAvatarUrl;
+    
+    @Column(length = 2048)
+    private String grantedScopes;
 }

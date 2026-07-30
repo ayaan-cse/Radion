@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Slf4j
@@ -34,7 +35,7 @@ public class IntegrationController {
     @PostMapping("/sync")
     public ResponseEntity<Void> syncNow(
             @RequestParam(defaultValue = "00000000-0000-0000-0000-000000000000") UUID userId) {
-        syncManagerService.triggerManualSync(userId);
+        syncManagerService.executeSync(userId);
         return ResponseEntity.ok().build();
     }
 
@@ -66,17 +67,28 @@ public class IntegrationController {
                             .user(user)
                             .platform(platform)
                             .status(ConnectionStatus.DISCONNECTED)
+                            .lastSyncAt(platform == Platform.GMAIL ? LocalDateTime.now() : null)
                             .build());
 
             googleOAuthService.exchangeCodeForTokens(code, connection);
 
             // Trigger an immediate initial sync for the newly connected service
-            syncManagerService.triggerManualSync(userId);
+            syncManagerService.executeSync(userId);
 
             return new RedirectView(frontendUrl + "/integrations?connection=success&platform=" + platform.name());
         } catch (Exception e) {
             log.error("Error during Google OAuth callback processing: {}", e.getMessage(), e);
             return new RedirectView(frontendUrl + "/integrations?connection=error&reason=csrf_or_oauth_failed");
         }
+    }
+
+    @DeleteMapping("/{platform}")
+    public ResponseEntity<Void> disconnect(
+            @PathVariable Platform platform,
+            @RequestParam UUID userId) {
+        log.info("Disconnecting integration {} for user {}", platform, userId);
+        connectedServiceRepository.findByUserIdAndPlatform(userId, platform)
+                .ifPresent(connectedServiceRepository::delete);
+        return ResponseEntity.ok().build();
     }
 }

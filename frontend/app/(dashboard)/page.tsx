@@ -9,6 +9,7 @@ import { TodaysEvents } from "@/components/dashboard/TodaysEvents";
 import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
 import { RecentMessages } from "@/components/dashboard/RecentMessages";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ClassroomWidget } from "@/components/dashboard/ClassroomWidget";
 import { motion } from "framer-motion";
 
 export default function DashboardPage() {
@@ -118,6 +119,13 @@ export default function DashboardPage() {
             )}
           </div>
         </GlassCard>
+
+        {/* Classroom Widget */}
+        <ClassroomWidget 
+          upcomingAssignments={data?.upcomingAssignments} 
+          overdueAssignments={data?.overdueAssignments} 
+          recentAnnouncements={data?.recentAnnouncements} 
+        />
 
         {/* Recent Messages */}
         <GlassCard className="flex-1 flex flex-col p-6">

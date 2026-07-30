@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JourneyReasoningResponse",
+  "type": "object",
+  "properties": {
+    "emailSummary": {
+      "type": "string",
+      "description": "1-2 sentence objective summary of why this evidence was received and what real-world event it represents in the student's world."
+    },
+    "hasJourneyImpact": {
+      "type": "boolean",
+      "description": "True if this email alters or impacts the student's academic or placement world state; false if spam, promotional, or irrelevant."
+    },
+    "uncertainty": {
+      "type": "boolean",
+      "description": "True ONLY if critical information like deadline dates or company identity is genuinely ambiguous."
+    },
+    "uncertaintyReason": {
+      "type": ["string", "null"],
+      "description": "String explaining uncertainty, or null if confident."
+    },
+    "commands": {
+      "type": "array",
+      "description": "List of Business Commands emitted based on the evidence. Return empty array [] if hasJourneyImpact is false.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "commandType": {
+            "type": "string",
+            "enum": [
+              "REGISTER_OPPORTUNITY",
+              "ADVANCE_OPPORTUNITY_STAGE",
+              "SCHEDULE_INTERVIEW",
+              "SCHEDULE_ASSESSMENT",
+              "ASSIGN_ACTION_ITEM",
+              "COMPLETE_ACTION_ITEM",
+              "ANNOUNCE_EVENT"
+            ]
+          },
+          "companyName": {
+            "type": ["string", "null"],
+            "description": "Company name if applicable, or null."
+          },
+          "title": {
+            "type": "string",
+            "description": "Clear, concise title for the opportunity, assessment, action item, or event."
+          },
+          "role": {
+            "type": ["string", "null"],
+            "description": "Job/Internship role title if applicable, or null."
+          },
+          "stage": {
+            "type": ["string", "null"],
+            "enum": ["REGISTRATION", "ASSESSMENT", "TECHNICAL_INTERVIEW", "HR_INTERVIEW", "OFFER", "REJECTED", null],
+            "description": "Target timeline stage if advancing opportunity, or null."
+          },
+          "ctc": {
+            "type": ["string", "null"],
+            "description": "Compensation/Stipend details if mentioned, or null."
+          },
+          "scheduledTime": {
+            "type": ["string", "null"],
+            "description": "ISO-8601 date-time string (YYYY-MM-DDTHH:mm:ss) for interviews, assessments, or events, or null."
+          },
+          "dueDate": {
+            "type": ["string", "null"],
+            "description": "ISO-8601 date-time string (YYYY-MM-DDTHH:mm:ss) for action item due dates or application deadlines, or null."
+          },
+          "meetingLinkOrUrl": {
+            "type": ["string", "null"],
+            "description": "Meeting URL, assessment platform link, or application portal URL, or null."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Actionable instructions, required documents, or next steps."
+          },
+          "evidenceQuote": {
+            "type": ["string", "null"],
+            "description": "Exact verbatim quote from the evidence content proving why this business command occurred in the student's world."
+          }
+        },
+        "required": ["commandType", "title"]
+      }
+    }
+  },
+  "required": ["emailSummary", "hasJourneyImpact", "uncertainty", "commands"]
+}

@@ -27,6 +27,10 @@ public class Event {
     @JoinColumn(name = "source_message_id")
     private Message sourceMessage;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_course_work_id")
+    private ClassroomCourseWork sourceCourseWork;
+
     private String title;
 
     private String companyOrSource;
@@ -46,4 +50,17 @@ public class Event {
 
     // Prevent AI from overwriting manual user edits
     private boolean isUserModified;
+
+    // Track Google Calendar sync status
+    @Column(length = 50)
+    private String calendarSyncStatus;
+
+    @Column(length = 2048)
+    private String calendarSyncError;
+
+    @Builder.Default
+    @Column(columnDefinition = "integer default 0")
+    private Integer retryCount = 0;
+
+    private LocalDateTime nextRetryAt;
 }

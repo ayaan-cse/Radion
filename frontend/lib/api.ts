@@ -1,4 +1,4 @@
-import { DashboardSummaryDTO, NotificationDTO } from "./types";
+import { DashboardSummaryDTO, NotificationDTO, DryRunResponseDTO } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -30,5 +30,20 @@ export const apiClient = {
 
   async markNotificationAsRead(id: string): Promise<void> {
     await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: 'POST' });
+  },
+
+  async disconnectIntegration(platform: string, userId: string): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/integrations/${platform}?userId=${userId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error("Disconnect failed");
+  },
+
+  async runDryRunClassification(limit: number): Promise<DryRunResponseDTO> {
+    const res = await fetch(`${API_BASE_URL}/dev/testing/classification/dry-run?limit=${limit}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error("Dry run classification failed");
+    return res.json();
   }
 };

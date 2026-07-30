@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -25,6 +26,8 @@ public class DashboardServiceImpl implements DashboardService {
     private final AIProcessingLogRepository aiLogRepository;
     private final ConnectedServiceRepository connectedServiceRepository;
     private final NotificationRepository notificationRepository;
+    private final ClassroomCourseWorkRepository courseWorkRepository;
+    private final ClassroomAnnouncementRepository announcementRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -44,7 +47,17 @@ public class DashboardServiceImpl implements DashboardService {
                 .findByUserIdAndEventTimeAfterOrderByEventTimeAsc(userId, endOfDay);
 
         List<AIProcessingLog> recentLogs = aiLogRepository
-                .findTop5ByMessageUserIdOrderByProcessedAtDesc(userId);
+                .findRecentPlacementLogs(userId, PageRequest.of(0, 5));
+
+        // Fetch Classroom Data
+        List<ClassroomCourseWork> upcomingCourseWork = courseWorkRepository
+                .findUpcomingCourseWork(userId, LocalDateTime.now(), PageRequest.of(0, 5));
+        
+        List<ClassroomCourseWork> overdueCourseWork = courseWorkRepository
+                .findOverdueCourseWork(userId, LocalDateTime.now(), PageRequest.of(0, 5));
+
+        List<ClassroomAnnouncement> recentAnnouncements = announcementRepository
+                .findRecentAnnouncements(userId, PageRequest.of(0, 5));
 
         // ---------------- Search Filter ----------------
         if (StringUtils.hasText(searchQuery)) {
@@ -63,6 +76,18 @@ public class DashboardServiceImpl implements DashboardService {
                     .filter(l ->
                             l.getMessage().getTitle().toLowerCase().contains(query)
                                     || l.getAiSummary().toLowerCase().contains(query))
+                    .collect(Collectors.toList());
+                    
+            upcomingCourseWork = upcomingCourseWork.stream()
+                    .filter(cw -> cw.getTitle().toLowerCase().contains(query) || cw.getCourse().getName().toLowerCase().contains(query))
+                    .collect(Collectors.toList());
+                    
+            overdueCourseWork = overdueCourseWork.stream()
+                    .filter(cw -> cw.getTitle().toLowerCase().contains(query) || cw.getCourse().getName().toLowerCase().contains(query))
+                    .collect(Collectors.toList());
+                    
+            recentAnnouncements = recentAnnouncements.stream()
+                    .filter(ca -> ca.getText().toLowerCase().contains(query) || ca.getCourse().getName().toLowerCase().contains(query))
                     .collect(Collectors.toList());
         }
 
@@ -126,6 +151,21 @@ public class DashboardServiceImpl implements DashboardService {
                                 .map(this::mapRecentMessage)
                                 .collect(Collectors.toList())
                 )
+                .upcomingAssignments(
+                        upcomingCourseWork.stream()
+                                .map(cw -> mapCourseWork(cw, "UPCOMING"))
+                                .collect(Collectors.toList())
+                )
+                .overdueAssignments(
+                        overdueCourseWork.stream()
+                                .map(cw -> mapCourseWork(cw, "OVERDUE"))
+                                .collect(Collectors.toList())
+                )
+                .recentAnnouncements(
+                        recentAnnouncements.stream()
+                                .map(this::mapAnnouncement)
+                                .collect(Collectors.toList())
+                )
                 .analytics(analytics)
                 .build();
     }
@@ -135,6 +175,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .platform(c.getPlatform())
                 .status(c.getStatus().name())
                 .lastSyncAt(formatRelativeTime(c.getLastSyncAt()))
+                .accountEmail(c.getAccountEmail())
+                .accountName(c.getAccountName())
+                .accountAvatarUrl(c.getAccountAvatarUrl())
                 .build();
     }
 
@@ -169,7 +212,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .platform(msg.getPlatform())
                 .title(msg.getTitle())
                 .summary(log.getAiSummary())
-                .timestamp(formatRelativeTime(log.getProcessedAt()))
+                .timestamp(formatRelativeTime(msg.getReceivedAt()))
                 .isUnread(msg.isUnread())
                 .build();
     }
@@ -184,7 +227,7 @@ public class DashboardServiceImpl implements DashboardService {
         if (time == null) {
             return "Never";
         }
-
+        
         long minutes = java.time.Duration
                 .between(time, LocalDateTime.now())
                 .toMinutes();
@@ -201,5 +244,24 @@ public class DashboardServiceImpl implements DashboardService {
             return "Synced " + hours + "h ago";
 
         return "Synced " + (hours / 24) + "d ago";
+    }
+
+    private DashboardSummaryDTO.ClassroomAssignmentDTO mapCourseWork(ClassroomCourseWork cw, String status) {
+        return DashboardSummaryDTO.ClassroomAssignmentDTO.builder()
+                .id(cw.getId().toString())
+                .courseName(cw.getCourse().getName())
+                .title(cw.getTitle())
+                .dueDate(cw.getDueDate() != null ? cw.getDueDate().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : "No due date")
+                .status(status)
+                .build();
+    }
+
+    private DashboardSummaryDTO.ClassroomAnnouncementDTO mapAnnouncement(ClassroomAnnouncement ca) {
+        return DashboardSummaryDTO.ClassroomAnnouncementDTO.builder()
+                .id(ca.getId().toString())
+                .courseName(ca.getCourse().getName())
+                .text(ca.getText() != null && ca.getText().length() > 100 ? ca.getText().substring(0, 97) + "..." : ca.getText())
+                .postedAt(formatRelativeTime(ca.getUpdateTime()))
+                .build();
     }
 }

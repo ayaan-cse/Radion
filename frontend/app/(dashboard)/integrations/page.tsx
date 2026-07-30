@@ -1,12 +1,13 @@
 "use client";
 
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Mail, BookOpen, MessageCircle, Calendar, RefreshCw, Unplug, CheckCircle2 } from "lucide-react";
+import { Mail, BookOpen, MessageCircle, Calendar, RefreshCw, Unplug, CheckCircle2, UserCheck, ArrowRightLeft } from "lucide-react";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/useToast";
 import { Platform } from "@/lib/types";
 import { useState, useEffect } from "react";
+import { apiClient } from "@/lib/api";
 
 interface IntegrationCardProps {
   id: Platform;
@@ -19,9 +20,13 @@ interface IntegrationCardProps {
   isComingSoon?: boolean;
   isConnected: boolean;
   lastSyncAt?: string;
+  accountEmail?: string;
+  accountName?: string;
+  accountAvatarUrl?: string;
   onConnect: () => void;
+  onSwitchAccount: () => void;
   onSync: () => Promise<void>;
-  onDisconnect: () => void;
+  onDisconnect: () => Promise<void>;
 }
 
 function IntegrationCard({
@@ -34,11 +39,16 @@ function IntegrationCard({
   isComingSoon,
   isConnected,
   lastSyncAt,
+  accountEmail,
+  accountName,
+  accountAvatarUrl,
   onConnect,
+  onSwitchAccount,
   onSync,
   onDisconnect,
 }: IntegrationCardProps) {
   const [syncing, setSyncing] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const handleSyncClick = async () => {
     setSyncing(true);
@@ -46,6 +56,15 @@ function IntegrationCard({
       await onSync();
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDisconnectClick = async () => {
+    setDisconnecting(true);
+    try {
+      await onDisconnect();
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -63,40 +82,68 @@ function IntegrationCard({
       </div>
 
       <h3 className="text-lg font-bold text-white mb-1">{title}</h3>
-      <p className="text-sm text-white/60 mb-6 flex-1 leading-relaxed">{description}</p>
+      <p className="text-sm text-white/60 mb-4 flex-1 leading-relaxed">{description}</p>
 
       {isConnected ? (
-        <div className="w-full flex flex-col gap-3 pt-2 border-t border-white/5">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
+        <div className="w-full flex flex-col gap-3 pt-3 border-t border-white/10 mt-auto">
+          {/* Connected Account Metadata */}
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center shrink-0 border border-white/10">
+              {accountAvatarUrl ? (
+                <img src={accountAvatarUrl} alt={accountName || "Account Avatar"} className="w-full h-full object-cover" />
+              ) : (
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+              )}
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-xs font-bold text-white truncate">{accountName || "Connected Account"}</span>
+              <span className="text-[11px] text-zinc-400 truncate">{accountEmail || "Active Connection"}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
             <span>Last synced:</span>
             <span className="text-zinc-300 font-medium">{lastSyncAt || "Recently"}</span>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 pt-1">
             <button
               onClick={handleSyncClick}
-              disabled={syncing}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-colors border border-blue-500/30 disabled:opacity-50"
+              disabled={syncing || disconnecting}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-colors border border-blue-500/30 disabled:opacity-50"
+              title="Sync Now"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
               <span>{syncing ? "Syncing..." : "Sync Now"}</span>
             </button>
             <button
-              onClick={onDisconnect}
-              className="flex items-center justify-center py-2 px-3 rounded-lg bg-white/5 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 text-xs font-semibold transition-colors border border-white/10 hover:border-red-500/30"
-              title="Disconnect Integration"
+              onClick={onSwitchAccount}
+              disabled={syncing || disconnecting}
+              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors border border-white/15 disabled:opacity-50"
+              title="Switch Account (Starts OAuth immediately without disconnecting)"
             >
-              <Unplug className="w-3.5 h-3.5" />
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>Switch</span>
+            </button>
+            <button
+              onClick={handleDisconnectClick}
+              disabled={syncing || disconnecting}
+              className="flex items-center justify-center py-2 px-2.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 text-xs font-semibold transition-colors border border-white/10 hover:border-red-500/30 disabled:opacity-50"
+              title="Disconnect Service (Removes connection only, never logs you out of Radion)"
+            >
+              <Unplug className={`w-3.5 h-3.5 ${disconnecting ? "animate-pulse text-red-400" : ""}`} />
             </button>
           </div>
         </div>
       ) : isComingSoon ? (
-        <button className="w-full py-2 rounded-lg bg-white/5 text-white/40 text-sm font-medium border border-white/5 cursor-not-allowed">
+        <button className="w-full py-2.5 rounded-xl bg-white/5 text-white/40 text-sm font-medium border border-white/5 cursor-not-allowed mt-auto">
           Coming Soon
         </button>
       ) : (
         <button
           onClick={onConnect}
-          className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/10 shadow-sm"
+          className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-semibold transition-all border border-white/15 shadow-sm hover:scale-[1.02] active:scale-[0.98] mt-auto"
         >
           Connect {title}
         </button>
@@ -146,8 +193,15 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleDisconnect = () => {
-    addToast("To disconnect an integration, please revoke access in your Google Account security settings.", "info");
+  const handleDisconnect = async (platform: Platform) => {
+    if (!userId) return;
+    try {
+      await apiClient.disconnectIntegration(platform, userId);
+      addToast(`Disconnected ${platform} successfully.`, "info");
+      await triggerSync();
+    } catch (err) {
+      addToast(`Failed to disconnect ${platform}.`, "error");
+    }
   };
 
   const getConnection = (platform: Platform) => {
@@ -155,42 +209,33 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col pt-4">
-      <h1 className="text-2xl font-bold text-white tracking-tight mb-2">Integrations</h1>
-      <p className="text-sm text-white/60 mb-8">
-        Connect and manage your external accounts to allow AI to monitor, sync, and extract tasks automatically.
+    <div className="flex-1 flex flex-col pt-4 overflow-y-auto custom-scrollbar pr-4">
+      <h1 className="text-2xl font-bold text-white tracking-tight mb-2">Connected Services & Integrations</h1>
+      <p className="text-sm text-white/60 mb-8 max-w-2xl">
+        Each connected service operates independently with its own Google account identity. You can connect different Gmail or Calendar accounts without logging out of Radion.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
         <IntegrationCard
           id="GMAIL"
           title="Gmail"
-          description="Extract interviews, project deadlines, and urgent placement updates directly from your inbox."
+          description="Connect your Google account once. Radion will monitor Gmail, understand placement emails using AI, and automatically create interview schedules, deadlines, reminders, and tasks inside your Google Calendar."
           icon={Mail}
           iconColor="text-red-400"
           bgColor="bg-red-500/20"
           borderColor="border-red-500/30"
           isConnected={!!getConnection("GMAIL")}
           lastSyncAt={getConnection("GMAIL")?.lastSyncAt}
+          accountEmail={getConnection("GMAIL")?.accountEmail}
+          accountName={getConnection("GMAIL")?.accountName}
+          accountAvatarUrl={getConnection("GMAIL")?.accountAvatarUrl}
           onConnect={() => handleConnect("GMAIL")}
+          onSwitchAccount={() => handleConnect("GMAIL")}
           onSync={handleSync}
-          onDisconnect={handleDisconnect}
+          onDisconnect={() => handleDisconnect("GMAIL")}
         />
 
-        <IntegrationCard
-          id="GOOGLE_CALENDAR"
-          title="Google Calendar"
-          description="Two-way sync for your daily schedule, academic lectures, and interview slots."
-          icon={Calendar}
-          iconColor="text-blue-400"
-          bgColor="bg-blue-500/20"
-          borderColor="border-blue-500/30"
-          isConnected={!!getConnection("GOOGLE_CALENDAR")}
-          lastSyncAt={getConnection("GOOGLE_CALENDAR")?.lastSyncAt}
-          onConnect={() => handleConnect("GOOGLE_CALENDAR")}
-          onSync={handleSync}
-          onDisconnect={handleDisconnect}
-        />
+
 
         <IntegrationCard
           id="CLASSROOM"
@@ -202,9 +247,13 @@ export default function IntegrationsPage() {
           borderColor="border-yellow-500/30"
           isConnected={!!getConnection("CLASSROOM")}
           lastSyncAt={getConnection("CLASSROOM")?.lastSyncAt}
+          accountEmail={getConnection("CLASSROOM")?.accountEmail}
+          accountName={getConnection("CLASSROOM")?.accountName}
+          accountAvatarUrl={getConnection("CLASSROOM")?.accountAvatarUrl}
           onConnect={() => handleConnect("CLASSROOM")}
+          onSwitchAccount={() => handleConnect("CLASSROOM")}
           onSync={handleSync}
-          onDisconnect={handleDisconnect}
+          onDisconnect={() => handleDisconnect("CLASSROOM")}
         />
 
         <IntegrationCard
@@ -218,8 +267,9 @@ export default function IntegrationsPage() {
           isComingSoon
           isConnected={false}
           onConnect={() => {}}
+          onSwitchAccount={() => {}}
           onSync={async () => {}}
-          onDisconnect={() => {}}
+          onDisconnect={async () => {}}
         />
       </div>
     </div>

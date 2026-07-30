@@ -6,6 +6,7 @@ import { NotificationPanel } from "./NotificationPanel";
 import { apiClient } from "@/lib/api";
 import { NotificationDTO } from "@/lib/types";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 interface TopBarProps {
   lastSyncTime: string;
@@ -99,11 +100,16 @@ export function TopBar({
       </div>
 
       {/* Avatar */}
-      <button className="relative w-10 h-10 rounded-full overflow-hidden border border-glass-border focus-visible:ring-2 focus-visible:ring-white/30 outline-none">
-        <div className="w-full h-full bg-white/20 backdrop-blur-md" />
-
+      <Link href="/profile" className="relative w-10 h-10 rounded-full overflow-hidden border border-glass-border focus-visible:ring-2 focus-visible:ring-white/30 outline-none block">
+        {session?.user?.image ? (
+          <img src={session.user.image} alt={session.user.name || "Profile"} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-xs font-bold">
+            {session?.user?.name?.[0] || "U"}
+          </div>
+        )}
         <StatusDot colorClass="bg-semantic-green absolute bottom-0 right-0 border-2 border-[#1a1a1a]" />
-      </button>
+      </Link>
     </div>
   );
 }

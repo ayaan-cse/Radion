@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -22,16 +23,12 @@ import java.util.Optional;
 public class EventEngine {
 
     private final EventRepository eventRepository;
-    private final GoogleCalendarSyncService calendarSyncService;
 
     @Transactional
     public Event createOrUpdateEvent(User user, Message sourceMessage, AIExtractionResult extraction) {
         LocalDateTime eventDateTime = extraction.getEventDate().atTime(
                 extraction.getEventTime() != null ? extraction.getEventTime() : java.time.LocalTime.of(23, 59)
         );
-
-        boolean isRegistration = extraction.getSubject().toLowerCase().contains("registration") || 
-                                 extraction.getSubject().toLowerCase().contains("apply");
 
         // 1. Duplicate Prevention & Update Logic
         Optional<Event> existingEvent = eventRepository.findByUserIdAndCompanyOrSourceAndEventTime(
@@ -54,53 +51,75 @@ public class EventEngine {
                     .category(extraction.getCategory())
                     .eventTime(eventDateTime)
                     .timelineGroupId(timelineGroupId)
+                    .calendarSyncStatus("PENDING")
                     .build();
         }
 
-        eventToSave = eventRepository.save(eventToSave);
-
-        // 3. Prepare Calendar DTO
-        LocalDateTime startTime = isRegistration ? sourceMessage.getReceivedAt() : eventDateTime;
-        LocalDateTime endTime = isRegistration ? eventDateTime : eventDateTime.plusHours(1);
-
-        CalendarEventDTO calendarDTO = CalendarEventDTO.builder()
-                .eventId(eventToSave.getId().toString())
-                .title(eventToSave.getTitle() + (extraction.getCompanyName() != null ? " - " + extraction.getCompanyName() : ""))
-                .description(buildDescription(extraction, sourceMessage))
-                .location(extraction.getLocation())
-                .companyName(extraction.getCompanyName())
-                .category(extraction.getCategory())
-                .startTime(startTime)
-                .endTime(endTime)
-                .isRegistration(isRegistration)
-                .requiresReminders(true)
-                .build();
-
-        // 4. Sync to Google Calendar
-        try {
-            if (eventToSave.getGoogleCalendarEventId() != null) {
-                calendarSyncService.updateEvent(user, eventToSave.getGoogleCalendarEventId(), calendarDTO);
-            } else {
-                String gCalId = calendarSyncService.syncEvent(user, calendarDTO);
-                eventToSave.setGoogleCalendarEventId(gCalId);
-            }
-            eventRepository.save(eventToSave);
-        } catch (Exception e) {
-            log.error("Failed to sync event {} to Google Calendar", eventToSave.getId(), e);
-            // We swallow the exception here so the Radion DB transaction still commits.
-            // A background job can retry failed calendar syncs later.
-        }
-
-        return eventToSave;
+        return eventRepository.save(eventToSave);
     }
 
-    private String buildDescription(AIExtractionResult extraction, Message sourceMessage) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(extraction.getSummary()).append("\n\n");
-        if (extraction.getRole() != null) sb.append("Role: ").append(extraction.getRole()).append("\n");
-        if (extraction.getCtc() != null) sb.append("CTC: ").append(extraction.getCtc()).append("\n");
-        if (extraction.getRegistrationLink() != null) sb.append("Link: ").append(extraction.getRegistrationLink()).append("\n");
-        sb.append("\nSource: ").append(sourceMessage.getPlatform());
-        return sb.toString();
+    @Transactional
+    public void updateCalendarSyncStatus(UUID eventId, String gCalId, String status, Exception syncException) {
+        eventRepository.findById(eventId).ifPresent(event -> {
+            if (gCalId != null) {
+                event.setGoogleCalendarEventId(gCalId);
+            }
+            
+            String error = syncException != null ? syncException.getMessage() : null;
+            if (error != null && error.length() > 2000) {
+                event.setCalendarSyncError(error.substring(0, 2000) + "...");
+            } else {
+                event.setCalendarSyncError(error);
+            }
+
+            if ("SYNCED".equals(status)) {
+                event.setCalendarSyncStatus("SYNCED");
+                event.setRetryCount(0);
+                event.setNextRetryAt(null);
+                log.info("Updated event {} sync status to SYNCED. GCal ID: {}", eventId, gCalId);
+            } else if ("FAILED".equals(status)) {
+                handleSyncFailure(event, error);
+            } else {
+                event.setCalendarSyncStatus(status);
+            }
+            
+            eventRepository.save(event);
+        });
+    }
+
+    private void handleSyncFailure(Event event, String errorStr) {
+        if (errorStr == null) errorStr = "Unknown error";
+        String lowerError = errorStr.toLowerCase();
+        
+        boolean isTemporary = lowerError.contains("429") || 
+                              lowerError.contains("500") || 
+                              lowerError.contains("502") || 
+                              lowerError.contains("503") || 
+                              lowerError.contains("504") || 
+                              lowerError.contains("timeout") || 
+                              lowerError.contains("connection") ||
+                              lowerError.contains("refresh") ||
+                              lowerError.contains("socket");
+
+        if (isTemporary) {
+            int currentRetry = event.getRetryCount() != null ? event.getRetryCount() : 0;
+            if (currentRetry >= 2) { // Max 3 attempts total (initial + 2 retries)
+                log.error("Event {} sync failed after {} retries. Marking PERMANENTLY_FAILED.", event.getId(), currentRetry);
+                event.setCalendarSyncStatus("PERMANENTLY_FAILED");
+                event.setNextRetryAt(null);
+            } else {
+                int[] delaySeconds = {30, 120}; // Retry 1 = 30s, Retry 2 = 120s
+                int delay = delaySeconds[currentRetry];
+                event.setRetryCount(currentRetry + 1);
+                event.setNextRetryAt(LocalDateTime.now().plusSeconds(delay));
+                event.setCalendarSyncStatus("FAILED");
+                log.warn("Event {} sync failed (Attempt {}). Retrying in {} seconds at {}", 
+                         event.getId(), event.getRetryCount(), delay, event.getNextRetryAt());
+            }
+        } else {
+            log.error("Event {} encountered a permanent sync failure. Error: {}", event.getId(), errorStr);
+            event.setCalendarSyncStatus("PERMANENTLY_FAILED");
+            event.setNextRetryAt(null);
+        }
     }
 }

@@ -50,14 +50,29 @@ public class AutomationEngine {
                 
                 // 2. Sync to Google Calendar
                 CalendarEventDTO gcalDto = CalendarEventDTO.builder()
+                        .eventId(event.getId().toString())
                         .title(event.getTitle() + " - " + event.getCompanyOrSource())
                         .description(extraction.getSummary() + "\n\nSource: " + sourceMessage.getPlatform())
                         .location(extraction.getLocation())
+                        .companyName(event.getCompanyOrSource())
+                        .category(event.getCategory())
                         .startTime(event.getEventTime())
                         .endTime(event.getEventTime().plusHours(1)) // Default 1 hr duration
                         .requiresReminders(true)
                         .build();
-                googleCalendarSyncService.syncEvent(user, gcalDto);
+                
+                try {
+                    String gCalId;
+                    if (event.getGoogleCalendarEventId() != null) {
+                        gCalId = googleCalendarSyncService.updateEvent(user, event.getGoogleCalendarEventId(), gcalDto);
+                    } else {
+                        gCalId = googleCalendarSyncService.syncEvent(user, gcalDto);
+                    }
+                    eventEngine.updateCalendarSyncStatus(event.getId(), gCalId, "SYNCED", null);
+                } catch (Exception e) {
+                    log.warn("Automation Engine Google Calendar sync failed for event {}: {}", event.getId(), e.getMessage());
+                    eventEngine.updateCalendarSyncStatus(event.getId(), null, "FAILED", e);
+                }
 
                 // 3. Notify User
                 notificationEngine.dispatch(user, 

@@ -6,5 +6,8 @@ import java.util.UUID;
 
 public interface TaskRepository extends JpaRepository<Task, UUID> {
     boolean existsByUserIdAndTitleIgnoreCase(UUID userId, String title);
+    java.util.List<Task> findByUserIdAndTitleIgnoreCase(UUID userId, String title);
     Optional<Task> findByUserIdAndBusinessKey(UUID userId, String businessKey);
+    java.util.List<Task> findByUserIdAndIsCompletedFalse(UUID userId);
+    Optional<Task> findByBusinessKey(String businessKey);
 }

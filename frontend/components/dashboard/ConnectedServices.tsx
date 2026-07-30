@@ -59,6 +59,9 @@ export function ConnectedServices({ connections, isLoading, lastSyncTime }: Conn
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-white leading-none">{config.name}</span>
+                        {conn.accountEmail ? (
+                          <span className="text-[10px] text-zinc-300 font-normal">({conn.accountEmail})</span>
+                        ) : null}
                         <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 uppercase tracking-wider leading-none">
                           Connected
                         </span>

@@ -19,4 +19,14 @@ public class User {
     
     @CreationTimestamp
     private LocalDateTime createdAt;
+    
+    @Column(length = 2048)
+    @Convert(converter = TokenEncryptionConverter.class)
+    private String googleAccessToken;
+    
+    @Column(length = 2048)
+    @Convert(converter = TokenEncryptionConverter.class)
+    private String googleRefreshToken;
+    
+    private LocalDateTime googleTokenExpiresAt;
 }

@@ -3,14 +3,18 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Home, Mail, Calendar, RefreshCw, Settings } from "lucide-react";
+import { Home, Mail, Calendar, RefreshCw, Settings, User, Beaker, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const TestIcon = Beaker || Activity;
 
 const navItems = [
   { id: "/", icon: Home, label: "Dashboard" },
   { id: "/mail", icon: Mail, label: "Mail" },
   { id: "/calendar", icon: Calendar, label: "Calendar" },
   { id: "/integrations", icon: RefreshCw, label: "Integrations" },
+  { id: "/dev/testing", icon: TestIcon, label: "Dev Testing" },
+  { id: "/profile", icon: User, label: "Profile" },
   { id: "/settings", icon: Settings, label: "Settings" },
 ];
 

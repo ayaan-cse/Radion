@@ -63,8 +63,8 @@ public class TokenEncryptionService {
 
             return Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
-            log.error("Error encrypting token value, storing as plaintext fallback", e);
-            return plaintext;
+            log.error("Error encrypting token value! EXCEPTION:", e);
+            throw new RuntimeException("Encryption failed!", e);
         }
     }
 

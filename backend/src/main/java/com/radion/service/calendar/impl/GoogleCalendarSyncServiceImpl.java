@@ -11,7 +11,7 @@ import com.google.api.services.calendar.model.EventReminder;
 import com.radion.domain.enums.Platform;
 import com.radion.domain.models.ConnectedService;
 import com.radion.domain.models.User;
-import com.radion.repository.ConnectedServiceRepository;
+import com.radion.repository.UserRepository;
 import com.radion.service.calendar.GoogleCalendarSyncService;
 import com.radion.service.calendar.dto.CalendarEventDTO;
 import com.radion.service.integration.oauth.GoogleOAuthServiceImpl;
@@ -22,9 +22,15 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.time.ZoneId;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -32,7 +38,7 @@ import java.util.Map;
 public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService {
 
     private final GoogleOAuthServiceImpl googleOAuthService;
-    private final ConnectedServiceRepository connectedServiceRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 2000))
@@ -42,34 +48,59 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
 
     @Override
     @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 2000))
-    public void updateEvent(User user, String googleCalendarEventId, CalendarEventDTO dto) {
-        doSyncEvent(user, dto, googleCalendarEventId);
+    public String updateEvent(User user, String existingGoogleEventId, CalendarEventDTO dto) {
+        return doSyncEvent(user, dto, existingGoogleEventId);
+    }
+
+    @Override
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    public void deleteEvent(User user, String existingGoogleEventId) {
+        if (existingGoogleEventId == null || existingGoogleEventId.isBlank()) return;
+        
+        if (user.getGoogleAccessToken() == null) {
+            log.warn("Skipping Google Calendar delete for event {}: No valid token for user {}", existingGoogleEventId, user.getId());
+            return;
+        }
+
+        if (!googleOAuthService.refreshUserAccessToken(user)) {
+            log.warn("Failed to refresh token for user {}", user.getId());
+            return;
+        }
+        userRepository.save(user);
+
+        try {
+            Calendar calendarService = buildCalendarClient(user.getGoogleAccessToken());
+            calendarService.events().delete("primary", existingGoogleEventId).execute();
+            log.info("Successfully deleted Google Calendar event: {}", existingGoogleEventId);
+        } catch (Exception e) {
+            log.warn("Failed or already deleted event {} from Google Calendar: {}", existingGoogleEventId, e.getMessage());
+        }
     }
 
     private String doSyncEvent(User user, CalendarEventDTO dto, String existingGoogleEventId) {
-        ConnectedService googleConnection = connectedServiceRepository
-                .findByUserId(user.getId()).stream()
-                .filter(c -> c.getPlatform() == Platform.GMAIL || c.getPlatform() == Platform.GOOGLE_CALENDAR) // Google connections hold the Google token
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No Google connection found for user"));
-
-        if (!googleOAuthService.refreshAccessToken(googleConnection)) {
-            throw new RuntimeException("Failed to refresh Google token");
+        if (user.getGoogleAccessToken() == null) {
+            log.info("Skipping Google Calendar sync: User {} has not connected Google Calendar via Dashboard", user.getId());
+            return null;
         }
 
-        Calendar calendarService = buildCalendarClient(googleConnection.getAccessToken());
-        
+        if (!googleOAuthService.refreshUserAccessToken(user)) {
+            throw new RuntimeException("Failed to refresh Google token for User " + user.getId());
+        }
+        userRepository.save(user);
+
         try {
-            Event googleEvent;
+            Calendar calendarService = buildCalendarClient(user.getGoogleAccessToken());
+
             boolean isUpdate = existingGoogleEventId != null;
+            Event googleEvent;
 
             if (isUpdate) {
-                googleEvent = calendarService.events().get("primary", existingGoogleEventId).execute();
-                // Protection: Do not overwrite if user manually removed our tracking property
-                if (googleEvent.getExtendedProperties() == null || 
-                    !googleEvent.getExtendedProperties().getPrivate().containsKey("radion_managed")) {
-                    log.info("Event {} was modified by user. Skipping update.", existingGoogleEventId);
-                    return existingGoogleEventId;
+                try {
+                    googleEvent = calendarService.events().get("primary", existingGoogleEventId).execute();
+                } catch (Exception e) {
+                    log.warn("Existing event {} not found in Google Calendar, falling back to insert", existingGoogleEventId);
+                    isUpdate = false;
+                    googleEvent = new Event();
                 }
             } else {
                 googleEvent = new Event();
@@ -91,21 +122,10 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
             // 3. Color Coding
             googleEvent.setColorId(getColorIdForCategory(dto.getCategory(), dto.isRegistration()));
 
-            // 4. Reminders (Especially for Registrations)
+            // 4. Dynamic Multi-Stage Reminders (Intelligently spaced based on deadline distance)
             if (dto.isRequiresReminders()) {
                 Event.Reminders reminders = new Event.Reminders().setUseDefault(false);
-                if (dto.isRegistration()) {
-                    // Remind 24 hours and 2 hours before deadline
-                    reminders.setOverrides(Arrays.asList(
-                            new EventReminder().setMethod("popup").setMinutes(24 * 60),
-                            new EventReminder().setMethod("popup").setMinutes(2 * 60)
-                    ));
-                } else {
-                    // Standard 30 min reminder
-                    reminders.setOverrides(Arrays.asList(
-                            new EventReminder().setMethod("popup").setMinutes(30)
-                    ));
-                }
+                reminders.setOverrides(calculateDynamicReminders(dto.getStartTime(), dto.isRegistration()));
                 googleEvent.setReminders(reminders);
             }
 
@@ -135,6 +155,43 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
         }
     }
 
+    private List<EventReminder> calculateDynamicReminders(LocalDateTime eventStartTime, boolean isRegistration) {
+        long minutesUntilEvent = ChronoUnit.MINUTES.between(LocalDateTime.now(), eventStartTime);
+        if (minutesUntilEvent <= 0) {
+            return Collections.singletonList(new EventReminder().setMethod("popup").setMinutes(15));
+        }
+
+        List<Integer> candidateMinutes = isRegistration
+                ? Arrays.asList(30 * 24 * 60, 14 * 24 * 60, 7 * 24 * 60, 5 * 24 * 60, 3 * 24 * 60, 2 * 24 * 60, 24 * 60, 12 * 60, 6 * 60, 2 * 60, 60, 30)
+                : Arrays.asList(7 * 24 * 60, 3 * 24 * 60, 24 * 60, 12 * 60, 6 * 60, 2 * 60, 60, 30, 15);
+
+        List<Integer> validMinutes = candidateMinutes.stream()
+                .filter(m -> m < minutesUntilEvent)
+                .collect(Collectors.toList());
+
+        if (validMinutes.isEmpty()) {
+            int halfTime = (int) (minutesUntilEvent / 2);
+            return Collections.singletonList(new EventReminder().setMethod("popup").setMinutes(Math.max(15, halfTime)));
+        }
+
+        List<Integer> selectedMinutes = new ArrayList<>();
+        if (validMinutes.size() <= 5) {
+            selectedMinutes.addAll(validMinutes);
+        } else {
+            int size = validMinutes.size();
+            selectedMinutes.add(validMinutes.get(0));
+            selectedMinutes.add(validMinutes.get(size / 4));
+            selectedMinutes.add(validMinutes.get(size / 2));
+            selectedMinutes.add(validMinutes.get(3 * size / 4));
+            selectedMinutes.add(validMinutes.get(size - 1));
+        }
+
+        return selectedMinutes.stream()
+                .distinct()
+                .map(m -> new EventReminder().setMethod("popup").setMinutes(m))
+                .collect(Collectors.toList());
+    }
+
     private Calendar buildCalendarClient(String accessToken) {
         GoogleCredential credential = new GoogleCredential().setAccessToken(accessToken);
         return new Calendar.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), credential)
@@ -148,6 +205,7 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
         
         return switch (category) {
             case INTERVIEW -> "9"; // Blueberry (Blue)
+            case CLASSROOM_ASSIGNMENT -> "10"; // Basil (Green)
             case TASK -> "10";     // Basil (Green)
             case DEADLINE -> "11"; // Tomato (Red)
             case MEETING -> "3";   // Grape (Purple)

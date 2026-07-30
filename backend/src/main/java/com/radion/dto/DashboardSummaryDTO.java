@@ -20,6 +20,11 @@ public class DashboardSummaryDTO {
 
     // New Analytics Section
     private AnalyticsDTO analytics;
+    
+    // Classroom Section
+    private List<ClassroomAssignmentDTO> upcomingAssignments;
+    private List<ClassroomAssignmentDTO> overdueAssignments;
+    private List<ClassroomAnnouncementDTO> recentAnnouncements;
 
     @Data
     @Builder
@@ -35,5 +40,24 @@ public class DashboardSummaryDTO {
         private int tasksPending;
         private double averageAiConfidence;
         private int hoursSaved;
+    }
+
+    @Data
+    @Builder
+    public static class ClassroomAssignmentDTO {
+        private String id;
+        private String courseName;
+        private String title;
+        private String dueDate;
+        private String status; // e.g. "OVERDUE", "UPCOMING"
+    }
+
+    @Data
+    @Builder
+    public static class ClassroomAnnouncementDTO {
+        private String id;
+        private String courseName;
+        private String text;
+        private String postedAt;
     }
 }

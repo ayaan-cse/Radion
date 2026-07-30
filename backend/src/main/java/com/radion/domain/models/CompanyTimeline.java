@@ -3,7 +3,11 @@ package com.radion.domain.models;
 import com.radion.domain.enums.TimelineStage;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -46,4 +50,16 @@ public class CompanyTimeline {
     
     @Column(length = 2048)
     private String registrationLink;
+
+    private String deadline;
+    private String assessmentDate;
+    private String interviewDate;
+    private boolean actionRequired;
+    private String priority;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "JSONB")
+    @Builder.Default
+    private Map<String, FieldProvenance> fieldProvenance = new HashMap<>();
 }
+

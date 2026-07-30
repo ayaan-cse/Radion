@@ -1,6 +1,5 @@
 package com.radion.domain.models;
 
-import com.radion.domain.enums.MessageClassification;
 import com.radion.domain.enums.MessageProcessingState;
 import com.radion.domain.enums.Platform;
 import jakarta.persistence.*;
@@ -41,8 +40,15 @@ public class Message {
     @Enumerated(EnumType.STRING)
     private MessageProcessingState processingState;
 
-    @Enumerated(EnumType.STRING)
-    private MessageClassification classification;
+    @Column(columnDefinition = "TEXT")
+    private String reasoningSummary;
+
+    private Integer mutationCount;
 
     private Integer trustScore;
+
+    @Builder.Default
+    private int retryCount = 0;
+    
+    private LocalDateTime nextRetryAt;
 }

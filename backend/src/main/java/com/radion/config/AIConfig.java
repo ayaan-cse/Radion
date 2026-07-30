@@ -24,7 +24,7 @@ public class AIConfig {
 
     @Bean
     @ConditionalOnProperty(name = "radion.ai.provider", havingValue = "gemini", matchIfMissing = true)
-    public LLMProvider geminiProvider(RestTemplate restTemplate) {
+    public GeminiProvider geminiProvider(RestTemplate restTemplate) {
         return new GeminiProvider(restTemplate);
     }
 }

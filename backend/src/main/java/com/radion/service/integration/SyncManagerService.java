@@ -43,11 +43,10 @@ public class SyncManagerService {
     }
 
     /**
-     * Manual Sync
+     * Unified Sync Execution
      */
-    @Transactional
-    public void triggerManualSync(UUID userId) {
-        log.info("Manual sync request received for userId: {}", userId);
+    public void executeSync(UUID userId) {
+        log.info("Sync execution started for userId: {}", userId);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -64,15 +63,18 @@ public class SyncManagerService {
             if (provider != null) {
                 try {
                     log.info("Sync started for platform {} and userId: {}", connection.getPlatform(), userId);
-                    provider.sync(user, connection);
+                    int itemsFetched = provider.sync(user, connection);
 
+                    // Unconditionally update lastSyncAt IF the pipeline completed without exceptions
                     connection.setLastSyncAt(LocalDateTime.now());
                     connectedServiceRepository.save(connection);
+                    log.info("Updated lastSyncAt for platform {} after fetching {} items.", connection.getPlatform(), itemsFetched);
+
                     log.info("Sync completed for platform {} and userId: {}", connection.getPlatform(), userId);
 
                 } catch (Exception e) {
                     log.error(
-                            "Sync failed for platform {} and user {}",
+                            "Sync failed for platform {} and user {}. Cursor (lastSyncAt) will NOT be advanced.",
                             connection.getPlatform(),
                             userId,
                             e
@@ -81,16 +83,15 @@ public class SyncManagerService {
             }
         }
         
-        log.info("Manual sync flow finished for userId: {}", userId);
+        log.info("Sync execution finished for userId: {}", userId);
     }
 
     /**
      * Automated Background Sync
      * Runs every 15 minutes (900000 ms) by default.
-     * Configurable through:
-     * radion.sync.interval
+     * Configurable through: radion.sync.interval
      */
-    @Scheduled(fixedRateString = "${radion.sync.interval:900000}")
+    @Scheduled(fixedDelayString = "${radion.sync.interval:900000}")
     public void automatedBackgroundSync() {
 
         log.info("Starting automated background sync for all active users...");
@@ -99,8 +100,7 @@ public class SyncManagerService {
 
         for (User user : allUsers) {
             try {
-                triggerManualSync(user.getId());
-
+                executeSync(user.getId());
             } catch (Exception e) {
                 log.error(
                         "Automated sync failed for user: {}",

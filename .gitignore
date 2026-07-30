@@ -22,3 +22,11 @@ npm-debug.log*
 
 # GitHub modernization tool sessions (generated locally)
 .github/modernize/
+
+# Mailbox data archives & analysis output
+*.mbox
+radion-analysis.json
+radion-analysis-part-*.json
+manifest.json
+*.tmp
+

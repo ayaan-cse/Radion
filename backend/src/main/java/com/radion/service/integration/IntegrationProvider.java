@@ -14,7 +14,7 @@ public interface IntegrationProvider {
      * Executes the data synchronization for the given user and connection.
      * Fetches raw messages/payloads and saves them to the MessageRepository.
      */
-    void sync(User user, ConnectedService connection);
+    int sync(User user, ConnectedService connection);
     
     /**
      * Refreshes the access token if expired.

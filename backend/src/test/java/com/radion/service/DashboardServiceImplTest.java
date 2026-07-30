@@ -17,6 +17,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +49,7 @@ class DashboardServiceImplTest {
                 .thenReturn(Collections.emptyList());
         when(eventRepository.findByUserIdAndEventTimeAfterOrderByEventTimeAsc(any(), any()))
                 .thenReturn(Collections.emptyList());
-        when(aiLogRepository.findTop5ByMessageUserIdOrderByProcessedAtDesc(testUserId))
+        when(aiLogRepository.findRecentPlacementLogs(eq(testUserId), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(Collections.emptyList());
         when(connectedServiceRepository.findByUserId(testUserId))
                 .thenReturn(Collections.emptyList());

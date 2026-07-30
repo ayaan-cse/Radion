@@ -1,22 +1,12 @@
 "use client";
-
-import { GlassCard } from "@/components/ui/GlassCard";
-import { AlertCircle } from "lucide-react";
-
-export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
+import { useEffect } from "react";
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
+  useEffect(() => { console.error("NEXT.JS ROOT ERROR:", error); }, [error]);
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-[#0a0f16]">
-      <GlassCard className="p-8 max-w-md text-center flex flex-col items-center">
-        <AlertCircle className="w-12 h-12 text-semantic-amber mb-4" />
-        <h2 className="text-white text-xl font-bold mb-2">Something went wrong!</h2>
-        <p className="text-white/60 text-sm mb-6">{error.message}</p>
-        <button 
-          onClick={() => reset()}
-          className="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors border border-white/10"
-        >
-          Try again
-        </button>
-      </GlassCard>
+    <div style={{ padding: "2rem", backgroundColor: "white", color: "black", minHeight: "100vh" }}>
+      <h2>CRITICAL RUNTIME ERROR</h2>
+      <pre style={{ color: "red", whiteSpace: "pre-wrap" }}>{error.message}</pre>
+      <pre style={{ fontSize: "12px", marginTop: "1rem" }}>{error.stack}</pre>
     </div>
   );
 }

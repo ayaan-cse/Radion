@@ -17,10 +17,9 @@ public class WhatsAppIntegrationProvider implements IntegrationProvider {
     }
 
     @Override
-    public void sync(User user, ConnectedService connection) {
-        log.info("Starting WhatsApp sync for user: {}", user.getId());
-        // TODO: Implement WhatsApp Cloud API / Webhook polling retrieval
-        log.info("WhatsApp sync completed for user: {}", user.getId());
+    public int sync(User user, ConnectedService connection) {
+        log.info("WhatsApp sync is not implemented yet for user: {}", user.getId());
+        return 0;
     }
 
     @Override

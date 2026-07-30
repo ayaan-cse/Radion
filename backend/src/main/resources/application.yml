@@ -19,6 +19,8 @@ radion:
     encryption-key: ${ENCRYPTION_KEY}
   ai:
     provider: gemini # or openai
+    system-instruction-path: "classpath:ai/system_instruction.md"
+    command-schema-path: "classpath:ai/business_command_schema.json"
     gemini:
       api-key: ${GEMINI_API_KEY:mock-key}
       model: ${GEMINI_MODEL:gemini-flash-latest}
@@ -27,9 +29,16 @@ radion:
 
       api-key: ${OPENAI_API_KEY:mock-key}
 
+logging:
+  level:
+    org.springframework.transaction: TRACE
+    org.springframework.orm.jpa: TRACE
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
 google:
   client:
-    id: ${GOOGLE_CLIENT_ID:mock-client-id}
-    secret: ${GOOGLE_CLIENT_SECRET:mock-client-secret}
+    id: ${GOOGLE_CLIENT_ID}
+    secret: ${GOOGLE_CLIENT_SECRET}
   redirect:
     uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/integrations/google/callback}

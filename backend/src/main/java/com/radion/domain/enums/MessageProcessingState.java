@@ -8,5 +8,6 @@ public enum MessageProcessingState {
     TIMELINE_UPDATED,
     IGNORED,
     MANUAL_REVIEW,
-    FAILED
+    FAILED,
+    PERMANENTLY_FAILED
 }

@@ -12,6 +12,12 @@ public interface GoogleCalendarSyncService {
     
     /**
      * Updates an existing Google Calendar event if the timeline/schedule changes.
+     * Returns the external Google Calendar Event ID (in case it was re-created).
      */
-    void updateEvent(User user, String googleCalendarEventId, CalendarEventDTO eventDTO);
+    String updateEvent(User user, String googleCalendarEventId, CalendarEventDTO eventDTO);
+    
+    /**
+     * Deletes an existing Google Calendar event when the local event is removed.
+     */
+    void deleteEvent(User user, String googleCalendarEventId);
 }

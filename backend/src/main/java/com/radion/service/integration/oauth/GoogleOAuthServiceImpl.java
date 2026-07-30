@@ -17,6 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -41,19 +46,19 @@ public class GoogleOAuthServiceImpl {
     private String redirectUri;
 
     // Granular Scopes required for each integration platform
-    private static final Collection<String> GMAIL_SCOPES = Collections.singletonList(
-            "https://www.googleapis.com/auth/gmail.readonly"
+    private static final Collection<String> GMAIL_SCOPES = Arrays.asList(
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid"
     );
 
     private static final Collection<String> CLASSROOM_SCOPES = Arrays.asList(
             "https://www.googleapis.com/auth/classroom.courses.readonly",
-            "https://www.googleapis.com/auth/classroom.coursework.me.readonly"
-    );
-
-    private static final Collection<String> CALENDAR_SCOPES = Arrays.asList(
-            "https://www.googleapis.com/auth/calendar.readonly",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar"
+            "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid"
     );
 
     @Data
@@ -99,7 +104,6 @@ public class GoogleOAuthServiceImpl {
         if (platform == null) return Collections.emptyList();
         return switch (platform) {
             case GMAIL -> GMAIL_SCOPES;
-            case GOOGLE_CALENDAR -> CALENDAR_SCOPES;
             case CLASSROOM -> CLASSROOM_SCOPES;
             default -> Collections.emptyList();
         };
@@ -109,7 +113,6 @@ public class GoogleOAuthServiceImpl {
         return new GoogleAuthorizationCodeFlow.Builder(
                 new NetHttpTransport(), GsonFactory.getDefaultInstance(), clientId, clientSecret, scopes)
                 .setAccessType("offline") // Required to get a refresh token
-                .setApprovalPrompt("force")
                 .build();
     }
 
@@ -121,6 +124,8 @@ public class GoogleOAuthServiceImpl {
         return getFlow(scopes).newAuthorizationUrl()
                 .setRedirectUri(redirectUri)
                 .setState(stateToken)
+                .set("prompt", "select_account consent")
+                .set("include_granted_scopes", "true")
                 .build();
     }
 
@@ -136,7 +141,46 @@ public class GoogleOAuthServiceImpl {
                 connection.setRefreshToken(response.getRefreshToken());
             }
             connection.setTokenExpiresAt(LocalDateTime.now().plusSeconds(response.getExpiresInSeconds()));
+            connection.setGrantedScopes(response.getScope());
             connection.setStatus(ConnectionStatus.CONNECTED);
+
+            // Fetch connected Google account profile info
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(response.getAccessToken());
+                HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                ResponseEntity<Map> userInfoRes = restTemplate.exchange(
+                        "https://www.googleapis.com/oauth2/v3/userinfo",
+                        HttpMethod.GET,
+                        entity,
+                        Map.class
+                );
+
+                if (userInfoRes.getBody() != null) {
+                    Map<String, Object> userInfo = userInfoRes.getBody();
+                    String email = (String) userInfo.get("email");
+                    String name = (String) userInfo.get("name");
+                    if (!StringUtils.hasText(name)) {
+                        String givenName = (String) userInfo.get("given_name");
+                        String familyName = (String) userInfo.get("family_name");
+                        if (StringUtils.hasText(givenName)) {
+                            name = givenName + (StringUtils.hasText(familyName) ? " " + familyName : "");
+                        } else {
+                            name = email;
+                        }
+                    }
+                    connection.setAccountEmail(email);
+                    connection.setAccountName(name);
+                    connection.setAccountAvatarUrl((String) userInfo.get("picture"));
+                    connection.setExternalAccountId((String) userInfo.get("sub"));
+                    log.info("Fetched connected account profile for platform {}: email={}, name={}",
+                            connection.getPlatform(), connection.getAccountEmail(), connection.getAccountName());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch userinfo for connected account during OAuth exchange", e);
+            }
 
             connectedServiceRepository.save(connection);
             log.info("Successfully exchanged code for tokens for connection: {}. Token expiry persisted: {}", connection.getId(), connection.getTokenExpiresAt());
@@ -181,6 +225,31 @@ public class GoogleOAuthServiceImpl {
             return false;
         } catch (IOException e) {
             log.error("Network error refreshing token", e);
+            return false;
+        }
+    }
+
+    public boolean refreshUserAccessToken(com.radion.domain.models.User user) {
+        if (user.getGoogleTokenExpiresAt() != null && user.getGoogleTokenExpiresAt().isAfter(LocalDateTime.now().plusMinutes(5))) {
+            return true;
+        }
+        if (user.getGoogleRefreshToken() == null) {
+            log.warn("No refresh token available for user: {}", user.getId());
+            return false;
+        }
+        try {
+            GoogleTokenResponse response = new GoogleRefreshTokenRequest(
+                    new NetHttpTransport(), GsonFactory.getDefaultInstance(),
+                    user.getGoogleRefreshToken(), clientId, clientSecret)
+                    .execute();
+            user.setGoogleAccessToken(response.getAccessToken());
+            user.setGoogleTokenExpiresAt(LocalDateTime.now().plusSeconds(response.getExpiresInSeconds()));
+            // Note: UserRepository save needs to be done by the caller, or injected here.
+            // Since we need to save it, let's inject UserRepository or let the caller save it.
+            // Let's modify the caller to save it, or inject UserRepository here.
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to refresh user access token for user: {}", user.getId(), e);
             return false;
         }
     }

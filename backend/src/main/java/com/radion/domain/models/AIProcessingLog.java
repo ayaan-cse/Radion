@@ -27,6 +27,7 @@ public class AIProcessingLog {
     @Column(columnDefinition = "JSONB")
     private String extractedJson;
 
+    @Column(columnDefinition = "TEXT")
     private String aiSummary;
 
     private Double confidenceScore;

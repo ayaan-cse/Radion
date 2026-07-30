@@ -1,7 +1,7 @@
 package com.radion.web;
 
 import com.radion.domain.enums.Platform;
-import com.radion.service.pipeline.InformationCollectionEngine;
+import com.radion.service.pipeline.reasoning.JourneyPipelineOrchestrator;
 import com.radion.service.pipeline.models.RawPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WebhookController {
 
-    private final InformationCollectionEngine pipelineEngine;
+    private final JourneyPipelineOrchestrator journeyPipelineOrchestrator;
 
     @Value("${whatsapp.webhook.verify-token:radion-secure-token}")
     private String verifyToken;
@@ -49,7 +49,7 @@ public class WebhookController {
                 .build();
 
         // Push directly into the existing AI Pipeline
-        pipelineEngine.processRawPayload(payload);
+        journeyPipelineOrchestrator.processRawPayload(payload);
         
         return ResponseEntity.ok().build();
     }
