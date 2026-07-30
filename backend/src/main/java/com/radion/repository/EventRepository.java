@@ -14,9 +14,11 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     @org.springframework.data.jpa.repository.Query("SELECT e FROM Event e WHERE e.user.id = :userId AND e.companyOrSource = :company ORDER BY e.eventTime ASC")
     List<Event> findByUserIdAndCompanyOrSourceOrderByEventTimeAsc(UUID userId, String company);
-    
+
     Optional<Event> findBySourceCourseWorkId(UUID courseWorkId);
+
+    List<Event> findByTimelineGroupId(String timelineGroupId);
 
     @org.springframework.data.jpa.repository.Query("SELECT e FROM Event e WHERE e.calendarSyncStatus = 'FAILED' AND e.retryCount < :maxRetries AND (e.nextRetryAt IS NULL OR e.nextRetryAt <= :now)")
     List<Event> findFailedEventsForRetry(int maxRetries, LocalDateTime now);
-}
+}

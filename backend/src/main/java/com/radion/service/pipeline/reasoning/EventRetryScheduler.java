@@ -44,7 +44,8 @@ public class EventRetryScheduler {
 
                 String gCalId;
                 if (event.getGoogleCalendarEventId() != null) {
-                    gCalId = googleCalendarSyncService.updateEvent(event.getUser(), event.getGoogleCalendarEventId(), gcalDto);
+                    gCalId = googleCalendarSyncService.updateEvent(event.getUser(), event.getGoogleCalendarEventId(),
+                            gcalDto);
                 } else {
                     gCalId = googleCalendarSyncService.syncEvent(event.getUser(), gcalDto);
                 }

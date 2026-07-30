@@ -17,4 +17,16 @@ public class ClassroomReasoningResponse {
     private String reminderStrategy;
     private boolean isActionRequired;
     private String summary;
+
+    /**
+     * AI-classified type: ASSIGNMENT, QUIZ, EXAM, LAB, TUTORIAL, PROJECT,
+     * PRACTICAL, MATERIAL, NOTES, ANNOUNCEMENT
+     */
+    private String type;
+
+    /**
+     * ISO-8601 date string extracted from announcement text (e.g. "2026-08-10T14:00:00").
+     * Null if no date found or item is not an announcement.
+     */
+    private String extractedDate;
 }

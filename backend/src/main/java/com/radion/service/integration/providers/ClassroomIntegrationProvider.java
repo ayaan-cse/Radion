@@ -147,8 +147,7 @@ public class ClassroomIntegrationProvider implements IntegrationProvider {
                 
                 if (dbWork.getProcessingState() == null || dbWork.getProcessingState() == MessageProcessingState.NEW) {
                     dbWork.setProcessingState(MessageProcessingState.NEW);
-                    dbWork = courseWorkRepository.save(dbWork);
-                    
+                    // AI Evaluation happens IN MEMORY before DB insert
                     try {
                         classroomPipelineOrchestrator.processCourseWork(dbWork);
                     } catch (Exception e) {
@@ -181,18 +180,21 @@ public class ClassroomIntegrationProvider implements IntegrationProvider {
                 if (announcement.getUpdateTime() != null) {
                     dbAnnouncement.setUpdateTime(LocalDateTime.ofInstant(Instant.parse(announcement.getUpdateTime()), ZoneId.systemDefault()));
                 }
-                
+
                 dbAnnouncement.setRawPayload(objectMapper.writeValueAsString(announcement));
-                
-                if (dbAnnouncement.getProcessingState() == null) {
+
+                if (dbAnnouncement.getProcessingState() == null || dbAnnouncement.getProcessingState() == MessageProcessingState.NEW) {
                     dbAnnouncement.setProcessingState(MessageProcessingState.NEW);
+                    // AI Evaluation happens IN MEMORY before DB insert
+                    try {
+                        classroomPipelineOrchestrator.processAnnouncement(dbAnnouncement);
+                    } catch (Exception e) {
+                        log.error("Failed to process Announcement immediately", e);
+                    }
+                } else {
+                    announcementRepository.save(dbAnnouncement);
                 }
-                announcementRepository.save(dbAnnouncement);
-                
-                // Announcements don't need AI pipeline unless we specifically want to parse them for tasks.
-                // The prompt specified "Announcements should NOT create Tasks. Dashboard only."
-                // So we just save them.
-                
+
                 count++;
             }
         }

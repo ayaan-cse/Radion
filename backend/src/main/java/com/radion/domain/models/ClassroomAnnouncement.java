@@ -35,6 +35,12 @@ public class ClassroomAnnouncement {
 
     private LocalDateTime updateTime;
 
+    /** AI-extracted date if announcement contains exam/viva/seminar/presentation date */
+    private LocalDateTime extractedEventDate;
+
+    /** Google Calendar Event ID if an event was created from this announcement */
+    private String googleCalendarEventId;
+
     @Enumerated(EnumType.STRING)
     private MessageProcessingState processingState;
 
@@ -46,3 +52,4 @@ public class ClassroomAnnouncement {
 
     private LocalDateTime nextRetryAt;
 }
+

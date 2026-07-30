@@ -39,6 +39,9 @@ public class ClassroomCourseWork {
 
     private LocalDateTime updateTime;
 
+    /** AI-classified type: ASSIGNMENT, QUIZ, EXAM, LAB, TUTORIAL, PROJECT, PRACTICAL, MATERIAL, NOTES */
+    private String type;
+
     @Enumerated(EnumType.STRING)
     private MessageProcessingState processingState;
 
@@ -50,3 +53,4 @@ public class ClassroomCourseWork {
 
     private LocalDateTime nextRetryAt;
 }
+

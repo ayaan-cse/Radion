@@ -119,9 +119,16 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
             googleEvent.setLocation(dto.getLocation());
 
             // 2. Time & Timezone Handling
-            ZoneId zone = ZoneId.systemDefault();
-            DateTime startDateTime = new DateTime(dto.getStartTime().atZone(zone).toInstant().toEpochMilli());
-            DateTime endDateTime = new DateTime(dto.getEndTime().atZone(zone).toInstant().toEpochMilli());
+            ZoneId zone = ZoneId.of("Asia/Kolkata");
+            // Google API requires strict RFC 3339 format with seconds included (HH:mm:ss)
+            // Java's toString() omits seconds if they are zero. We must explicitly format it.
+            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
+            
+            String startRfc = dto.getStartTime().atZone(zone).format(formatter);
+            String endRfc = dto.getEndTime().atZone(zone).format(formatter);
+
+            DateTime startDateTime = new DateTime(startRfc);
+            DateTime endDateTime = new DateTime(endRfc);
             
             googleEvent.setStart(new EventDateTime().setDateTime(startDateTime).setTimeZone(zone.getId()));
             googleEvent.setEnd(new EventDateTime().setDateTime(endDateTime).setTimeZone(zone.getId()));
@@ -211,14 +218,26 @@ public class GoogleCalendarSyncServiceImpl implements GoogleCalendarSyncService 
     private String getColorIdForCategory(com.radion.domain.enums.EventCategory category, boolean isRegistration) {
         if (isRegistration) return "11"; // Tomato (Red) for Deadlines/Registrations
         if (category == null) return "9"; // Default Blueberry
-        
+
         return switch (category) {
             case INTERVIEW -> "9"; // Blueberry (Blue)
-            case CLASSROOM_ASSIGNMENT -> "10"; // Basil (Green)
-            case TASK -> "10";     // Basil (Green)
-            case DEADLINE -> "11"; // Tomato (Red)
-            case MEETING -> "3";   // Grape (Purple)
-            default -> "9";
+            case DEADLINE   -> "11"; // Tomato (Red)
+            case MEETING    -> "3";  // Grape (Purple)
+            case TASK       -> "9";  // Blueberry
+
+            // All Classroom events → Basil Green ("10")
+            case CLASSROOM_ASSIGNMENT,
+                 CLASSROOM_QUIZ,
+                 CLASSROOM_EXAM,
+                 CLASSROOM_LAB,
+                 CLASSROOM_PROJECT,
+                 CLASSROOM_TUTORIAL,
+                 CLASSROOM_PRACTICAL,
+                 CLASSROOM_ANNOUNCEMENT,
+                 CLASSROOM_MATERIAL,
+                 CLASSROOM_NOTES -> "10"; // Basil (Green)
+
+            default -> "9"; // Blueberry fallback
         };
     }
 }
