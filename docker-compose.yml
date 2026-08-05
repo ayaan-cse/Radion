@@ -21,11 +21,15 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET?Missing GOOGLE_CLIENT_SECRET in environment}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI?Missing GOOGLE_REDIRECT_URI in environment}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY?Missing ENCRYPTION_KEY in environment}
+      - FRONTEND_URL=${FRONTEND_URL?Missing FRONTEND_URL in environment}
     depends_on:
       - db
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL?Missing NEXT_PUBLIC_API_URL in environment}
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL?Missing NEXT_PUBLIC_API_URL in environment}
