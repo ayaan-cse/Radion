@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.vscode
+backend/target/
+frontend/node_modules/
+frontend/.next/
+*.log
+*.mbox
+*.json
+.env
+.env.local

@@ -3,42 +3,43 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: radion_user
-      POSTGRES_PASSWORD: radion_password
-      POSTGRES_DB: radion_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER?Missing POSTGRES_USER in environment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Missing POSTGRES_PASSWORD in environment}
+      POSTGRES_DB: ${POSTGRES_DB?Missing POSTGRES_DB in environment}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/radion_db
-      - SPRING_DATASOURCE_USERNAME=radion_user
-      - SPRING_DATASOURCE_PASSWORD=radion_password
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8080/api/integrations/google/callback}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB?Missing POSTGRES_DB in environment}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER?Missing POSTGRES_USER in environment}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD?Missing POSTGRES_PASSWORD in environment}
+      - GEMINI_API_KEY=${GEMINI_API_KEY?Missing GEMINI_API_KEY in environment}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID?Missing GOOGLE_CLIENT_ID in environment}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET?Missing GOOGLE_CLIENT_SECRET in environment}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI?Missing GOOGLE_REDIRECT_URI in environment}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY?Missing ENCRYPTION_KEY in environment}
     depends_on:
       - db
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8080/api
-      - INTERNAL_API_URL=${INTERNAL_API_URL}
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL?Missing NEXT_PUBLIC_API_URL in environment}
+      - INTERNAL_API_URL=${INTERNAL_API_URL?Missing INTERNAL_API_URL in environment}
+      - NEXTAUTH_URL=${NEXTAUTH_URL?Missing NEXTAUTH_URL in environment}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET?Missing NEXTAUTH_SECRET in environment}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID?Missing GOOGLE_CLIENT_ID in environment}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET?Missing GOOGLE_CLIENT_SECRET in environment}
     depends_on:
       - backend
 

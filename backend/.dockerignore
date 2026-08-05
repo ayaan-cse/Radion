@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+.vscode
+target/
+*.log
+*.mbox
+*.json
+.env
+.env.local

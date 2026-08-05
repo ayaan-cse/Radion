@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/radion_db
-    username: radion_user
-    password: radion_password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -22,23 +22,23 @@ radion:
     system-instruction-path: "classpath:ai/system_instruction.md"
     command-schema-path: "classpath:ai/business_command_schema.json"
     gemini:
-      api-key: ${GEMINI_API_KEY:mock-key}
+      api-key: ${GEMINI_API_KEY}
       model: ${GEMINI_MODEL:gemini-flash-latest}
 
     openai:
 
-      api-key: ${OPENAI_API_KEY:mock-key}
+      api-key: ${OPENAI_API_KEY:}
 
 logging:
   level:
-    org.springframework.transaction: TRACE
-    org.springframework.orm.jpa: TRACE
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.transaction: WARN
+    org.springframework.orm.jpa: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
 
 google:
   client:
     id: ${GOOGLE_CLIENT_ID}
     secret: ${GOOGLE_CLIENT_SECRET}
   redirect:
-    uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/integrations/google/callback}
+    uri: ${GOOGLE_REDIRECT_URI}
