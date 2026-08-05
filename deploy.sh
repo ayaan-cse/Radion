@@ -52,7 +52,7 @@ fi
 
 # 5. Build and deploy
 echo "=> Building and starting services..."
-sudo docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+sudo docker compose up -d --build
 
 echo "=========================================="
 echo " Deployment successful!                   "

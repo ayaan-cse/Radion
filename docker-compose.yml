@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -14,8 +12,6 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
-    ports:
-      - "8080:8080"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB?Missing POSTGRES_DB in environment}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER?Missing POSTGRES_USER in environment}
@@ -31,8 +27,6 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL?Missing NEXT_PUBLIC_API_URL in environment}
       - INTERNAL_API_URL=${INTERNAL_API_URL?Missing INTERNAL_API_URL in environment}
@@ -43,5 +37,23 @@ services:
     depends_on:
       - backend
 
+  caddy:
+    image: caddy:2.7.6-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME?Missing DOMAIN_NAME in environment}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
