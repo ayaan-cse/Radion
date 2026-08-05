@@ -1,0 +1,4 @@
+{$DOMAIN_NAME} {
+    reverse_proxy /api/* backend:8080
+    reverse_proxy frontend:3000
+}
