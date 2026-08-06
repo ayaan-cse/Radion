@@ -12,21 +12,21 @@ export function UpcomingEvents({ events }: { events: UpcomingEventDTO[] }) {
   return (
     <div className="flex flex-col w-full">
       {events.map((event) => (
-        <div key={event.id} className="flex items-center py-3 border-b border-white/10 last:border-0">
-          {/* Stacked Date */}
-          <div className="flex flex-col items-center justify-center w-12 mr-4">
-            <span className="text-lg font-bold text-white leading-none">{event.day}</span>
-            <span className="text-xs font-medium text-white/60 uppercase tracking-wider mt-1">{event.month}</span>
+        <div key={event.id} className="flex items-center py-2 border-b border-white/10 last:border-0 gap-2">
+          {/* Stacked Date — compact */}
+          <div className="flex flex-col items-center justify-center w-9 shrink-0">
+            <span className="text-[15px] font-bold text-white leading-none">{event.day}</span>
+            <span className="text-[9px] font-medium text-white/55 uppercase tracking-wider">{event.month}</span>
           </div>
-          
-          <StatusDot colorClass={categoryDots[event.category]} className="mr-4" />
-          
-          <div className="flex-1 flex flex-col justify-center">
-            <span className="text-sm font-semibold text-white">{event.company}</span>
-            <span className="text-xs text-white/60 mt-0.5">{event.title}</span>
+
+          <StatusDot colorClass={categoryDots[event.category]} className="shrink-0" />
+
+          <div className="flex-1 flex flex-col min-w-0">
+            <span className="text-[13px] font-semibold text-white truncate">{event.company}</span>
+            <span className="text-[11px] text-white/55 truncate">{event.title}</span>
           </div>
-          
-          <span className="text-sm font-medium text-white/80">{event.time}</span>
+
+          <span className="text-[12px] font-medium text-white/70 shrink-0 ml-1">{event.time}</span>
         </div>
       ))}
     </div>

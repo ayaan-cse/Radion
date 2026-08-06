@@ -18,7 +18,6 @@ export default function DashboardPage() {
 
   const handleManualSync = async () => {
     const success = await triggerSync();
-
     if (success) {
       addToast("Sync completed successfully", "success");
     } else {
@@ -28,13 +27,10 @@ export default function DashboardPage() {
 
   if (isError) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <GlassCard className="p-8 text-center">
-          <h2 className="text-white text-xl font-bold mb-2">
-            Connection Error
-          </h2>
-
-          <p className="text-white/60">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <GlassCard className="p-6 text-center max-w-sm w-full">
+          <h2 className="text-white text-base font-bold mb-2">Connection Error</h2>
+          <p className="text-white/60 text-sm">
             Failed to load dashboard data. Please ensure the backend is running.
           </p>
         </GlassCard>
@@ -45,24 +41,21 @@ export default function DashboardPage() {
   if (!data) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-white/60">Loading session...</p>
+        <p className="text-white/60 text-sm">Loading session...</p>
       </div>
     );
   }
 
   return (
     <>
-      <header className="flex flex-col gap-2 w-full md:flex-row md:items-center md:justify-between md:gap-0">
-        <div className="flex flex-col">
-          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-            {isLoading
-              ? "Loading..."
-              : `Good Morning, ${data?.user.firstName} 👋`}
+      {/* Compact header — stacks on mobile, row on desktop */}
+      <header className="flex items-start justify-between w-full gap-2 mb-0">
+        <div className="flex flex-col min-w-0 flex-1">
+          <h1 className="text-[20px] md:text-2xl font-bold text-white tracking-tight leading-snug">
+            {isLoading ? "Loading…" : `Good Morning, ${data?.user.firstName} 👋`}
           </h1>
-
-          <p className="text-xs md:text-sm text-white/60 mt-1">
-            AI is monitoring your connected accounts and turning important
-            messages into events.
+          <p className="text-[11px] md:text-sm text-white/55 mt-0.5 line-clamp-1 md:line-clamp-none leading-snug">
+            AI is monitoring your accounts and turning important messages into events.
           </p>
         </div>
 
@@ -74,81 +67,72 @@ export default function DashboardPage() {
         />
       </header>
 
-
+      {/* Connected services — compact strip */}
       <ConnectedServices
         connections={data?.connections || []}
         isLoading={isLoading}
         lastSyncTime={data?.lastSyncTime}
       />
 
+      {/* Main content cards — stack naturally on mobile */}
       <motion.div
-        className="flex-1 flex flex-col gap-6 pb-2"
-        initial={{ opacity: 0, y: 20 }}
+        className="flex flex-col gap-3 md:gap-5 pb-2"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, staggerChildren: 0.1 }}
+        transition={{ duration: 0.4 }}
       >
         {/* Today's Events */}
-        <GlassCard className="flex-1 flex flex-col p-6">
-          <h2 className="text-white font-bold text-[17px] tracking-wide mb-4">
-            Today's Events
+        <GlassCard className="flex flex-col p-4 md:p-6">
+          <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide mb-2 md:mb-4">
+            Today&apos;s Events
           </h2>
-
-          <div className="flex-1 relative overflow-y-auto pr-2 custom-scrollbar">
-            {isLoading ? (
-              <EmptyState message="Loading events..." />
-            ) : data?.todaysEvents.length === 0 ? (
-              <EmptyState message="No events scheduled for today." />
-            ) : (
-              <TodaysEvents events={data!.todaysEvents} />
-            )}
-          </div>
+          {isLoading ? (
+            <EmptyState message="Loading events..." />
+          ) : data?.todaysEvents.length === 0 ? (
+            <EmptyState message="No events scheduled for today." />
+          ) : (
+            <TodaysEvents events={data!.todaysEvents} />
+          )}
         </GlassCard>
 
         {/* Upcoming Events */}
-        <GlassCard className="flex-1 flex flex-col p-6">
-          <h2 className="text-white font-bold text-[17px] tracking-wide mb-4">
+        <GlassCard className="flex flex-col p-4 md:p-6">
+          <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide mb-2 md:mb-4">
             Upcoming Events
           </h2>
-
-          <div className="flex-1 relative overflow-y-auto pr-2 custom-scrollbar">
-            {isLoading ? (
-              <EmptyState message="Loading timeline..." />
-            ) : data?.upcomingEvents.length === 0 ? (
-              <EmptyState message="No upcoming events found." />
-            ) : (
-              <UpcomingEvents events={data!.upcomingEvents} />
-            )}
-          </div>
+          {isLoading ? (
+            <EmptyState message="Loading timeline..." />
+          ) : data?.upcomingEvents.length === 0 ? (
+            <EmptyState message="No upcoming events found." />
+          ) : (
+            <UpcomingEvents events={data!.upcomingEvents} />
+          )}
         </GlassCard>
 
         {/* Classroom Widget */}
-        <ClassroomWidget 
-          upcomingAssignments={data?.upcomingAssignments} 
-          overdueAssignments={data?.overdueAssignments} 
-          recentAnnouncements={data?.recentAnnouncements} 
+        <ClassroomWidget
+          upcomingAssignments={data?.upcomingAssignments}
+          overdueAssignments={data?.overdueAssignments}
+          recentAnnouncements={data?.recentAnnouncements}
         />
 
-        {/* Recent Messages */}
-        <GlassCard className="flex-1 flex flex-col p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white font-bold text-[17px] tracking-wide">
-              Recent Ai Processed Messages
+        {/* Recent AI Messages */}
+        <GlassCard className="flex flex-col p-4 md:p-6">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
+            <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide">
+              Recent AI Messages
             </h2>
-
-            <button className="text-sm text-white/60 hover:text-white transition-colors">
+            <button className="text-[11px] text-white/60 hover:text-white transition-colors">
               View all
             </button>
           </div>
-
-          <div className="flex-1 relative overflow-y-auto pr-2 custom-scrollbar">
-            {isLoading ? (
-              <EmptyState message="Loading messages..." />
-            ) : data?.recentMessages.length === 0 ? (
-              <EmptyState message="No recent messages processed." />
-            ) : (
-              <RecentMessages messages={data!.recentMessages} />
-            )}
-          </div>
+          {isLoading ? (
+            <EmptyState message="Loading messages..." />
+          ) : data?.recentMessages.length === 0 ? (
+            <EmptyState message="No recent messages processed." />
+          ) : (
+            <RecentMessages messages={data!.recentMessages} />
+          )}
         </GlassCard>
       </motion.div>
     </>

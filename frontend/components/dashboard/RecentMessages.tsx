@@ -12,29 +12,34 @@ export function RecentMessages({ messages }: { messages: MessageDTO[] }) {
   return (
     <div className="flex flex-col w-full">
       {messages.map((msg) => {
-        const PlatformIcon = platformConfig[msg.platform].icon;
-        
+        const config = platformConfig[msg.platform] || { icon: Mail, name: msg.platform, color: "text-white/60" };
+        const PlatformIcon = config.icon;
+
         return (
-          <div key={msg.id} className="flex items-center py-3 border-b border-white/10 last:border-0">
-            {/* Platform Icon matching screenshot style */}
-            <div className="w-8 h-8 rounded-md bg-white/10 flex items-center justify-center mr-3">
-              <PlatformIcon className={`w-4 h-4 ${platformConfig[msg.platform].color}`} />
+          <div key={msg.id} className="flex items-center py-2 border-b border-white/10 last:border-0 gap-2">
+            {/* Platform icon */}
+            <div className="w-7 h-7 rounded-lg bg-white/8 flex items-center justify-center shrink-0">
+              <PlatformIcon className={`w-3.5 h-3.5 ${config.color}`} />
             </div>
-            
-            <span className="w-24 text-sm font-medium text-white/80">{platformConfig[msg.platform].name}</span>
-            
-            <div className="flex-1 flex flex-col justify-center">
-              <span className="text-sm font-semibold text-white">{msg.title}</span>
-              <span className="text-xs text-white/50 truncate max-w-md mt-0.5">{msg.summary}</span>
+
+            {/* Platform name — hidden on very small screens */}
+            <span className="w-12 text-[11px] font-medium text-white/60 shrink-0 hidden sm:block">
+              {config.name}
+            </span>
+
+            {/* Title + summary */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <span className="text-[13px] font-semibold text-white truncate">{msg.title}</span>
+              <span className="text-[11px] text-white/45 truncate mt-0.5">{msg.summary}</span>
             </div>
-            
-            <span className="text-xs font-medium text-white/40 mr-4">{msg.timestamp}</span>
-            
-            {/* Unread Dot */}
+
+            <span className="text-[11px] font-medium text-white/40 shrink-0 ml-1">{msg.timestamp}</span>
+
+            {/* Unread dot */}
             {msg.isUnread ? (
-              <StatusDot colorClass="bg-semantic-blue" />
+              <StatusDot colorClass="bg-semantic-blue shrink-0" />
             ) : (
-              <div className="w-2 h-2" /> /* Spacer for alignment */
+              <div className="w-2 h-2 shrink-0" />
             )}
           </div>
         );

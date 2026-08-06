@@ -19,7 +19,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-3 bg-black/40 backdrop-blur-xl border-t border-white/10 safe-area-pb">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-1 py-2 bg-black/50 backdrop-blur-xl border-t border-white/10">
       {navItems.map((item) => {
         const isActive = pathname === item.id;
         const Icon = item.icon;
@@ -29,26 +29,34 @@ export function MobileBottomNav() {
             key={item.id}
             href={item.id}
             aria-label={item.label}
-            className="relative flex flex-col items-center gap-1 px-2 py-1 rounded-xl outline-none"
+            className="relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl outline-none min-w-[44px]"
           >
             {isActive && (
               <motion.div
                 layoutId="mobile-active-pill"
-                className="absolute inset-0 bg-white/15 rounded-xl"
+                className="absolute inset-0 bg-white/12 rounded-xl"
                 initial={false}
-                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
               />
             )}
             <motion.div
-              animate={{ scale: isActive ? 1.1 : 1, opacity: isActive ? 1 : 0.5 }}
-              transition={{ duration: 0.15 }}
+              animate={{ scale: isActive ? 1.05 : 1, opacity: isActive ? 1 : 0.5 }}
+              transition={{ duration: 0.12 }}
               className="relative z-10 flex flex-col items-center gap-0.5"
             >
               <Icon
-                className={cn("w-5 h-5 transition-colors", isActive ? "text-white" : "text-white/60")}
+                className={cn(
+                  "w-[18px] h-[18px] transition-colors",
+                  isActive ? "text-white" : "text-white/55"
+                )}
                 strokeWidth={isActive ? 2.5 : 2}
               />
-              <span className={cn("text-[10px] font-medium", isActive ? "text-white" : "text-white/50")}>
+              <span
+                className={cn(
+                  "text-[9px] font-medium leading-none",
+                  isActive ? "text-white" : "text-white/45"
+                )}
+              >
                 {item.label}
               </span>
             </motion.div>
