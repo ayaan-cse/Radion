@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/sidebar/Sidebar";
+import { MobileBottomNav } from "@/components/sidebar/MobileBottomNav";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,12 +11,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       
       {/* Main Layout Grid */}
-      <div className="relative z-10 flex h-full p-6 gap-8">
-        <Sidebar className="h-full flex-shrink-0" />
-        <main className="flex-1 flex flex-col min-w-0 h-full">
+      <div className="relative z-10 flex h-full p-3 gap-4 md:p-6 md:gap-8">
+        {/* Sidebar: hidden on mobile, visible on md+ */}
+        <div className="hidden md:flex">
+          <Sidebar className="h-full flex-shrink-0" />
+        </div>
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto pb-20 md:pb-0 custom-scrollbar">
           {children}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

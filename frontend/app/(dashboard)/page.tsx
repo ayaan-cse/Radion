@@ -52,15 +52,15 @@ export default function DashboardPage() {
 
   return (
     <>
-      <header className="flex items-center justify-between w-full">
+      <header className="flex flex-col gap-2 w-full md:flex-row md:items-center md:justify-between md:gap-0">
         <div className="flex flex-col">
-          <h1 className="text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
             {isLoading
               ? "Loading..."
               : `Good Morning, ${data?.user.firstName} 👋`}
           </h1>
 
-          <p className="text-sm text-white/60 mt-1">
+          <p className="text-xs md:text-sm text-white/60 mt-1">
             AI is monitoring your connected accounts and turning important
             messages into events.
           </p>
@@ -73,6 +73,7 @@ export default function DashboardPage() {
           isSyncing={isLoading}
         />
       </header>
+
 
       <ConnectedServices
         connections={data?.connections || []}
