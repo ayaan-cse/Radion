@@ -74,18 +74,19 @@ export default function DashboardPage() {
         lastSyncTime={data?.lastSyncTime}
       />
 
-      {/* Main content cards — stack naturally on mobile */}
+      {/* Main content cards — stack naturally on mobile, fill screen on desktop */}
       <motion.div
-        className="flex flex-col gap-3 md:gap-5 pb-2"
+        className="flex flex-col gap-4 md:gap-5 pb-4 flex-1 min-h-0"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
         {/* Today's Events */}
-        <GlassCard className="flex flex-col p-4 md:p-6">
-          <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide mb-2 md:mb-4">
+        <GlassCard className="flex flex-col p-4 md:p-6 h-[260px] md:h-auto md:flex-1">
+          <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide mb-2 md:mb-4 shrink-0">
             Today&apos;s Events
           </h2>
+          <div className="flex-1 relative overflow-y-auto pr-2 custom-scrollbar">
           {isLoading ? (
             <EmptyState message="Loading events..." />
           ) : data?.todaysEvents.length === 0 ? (
@@ -93,13 +94,15 @@ export default function DashboardPage() {
           ) : (
             <TodaysEvents events={data!.todaysEvents} />
           )}
+          </div>
         </GlassCard>
 
         {/* Upcoming Events */}
-        <GlassCard className="flex flex-col p-4 md:p-6">
-          <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide mb-2 md:mb-4">
+        <GlassCard className="flex flex-col p-4 md:p-6 h-[260px] md:h-auto md:flex-1">
+          <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide mb-2 md:mb-4 shrink-0">
             Upcoming Events
           </h2>
+          <div className="flex-1 relative overflow-y-auto pr-2 custom-scrollbar">
           {isLoading ? (
             <EmptyState message="Loading timeline..." />
           ) : data?.upcomingEvents.length === 0 ? (
@@ -107,6 +110,7 @@ export default function DashboardPage() {
           ) : (
             <UpcomingEvents events={data!.upcomingEvents} />
           )}
+          </div>
         </GlassCard>
 
         {/* Classroom Widget */}
@@ -117,8 +121,8 @@ export default function DashboardPage() {
         />
 
         {/* Recent AI Messages */}
-        <GlassCard className="flex flex-col p-4 md:p-6">
-          <div className="flex items-center justify-between mb-2 md:mb-4">
+        <GlassCard className="flex flex-col p-4 md:p-6 h-[200px] md:h-auto md:flex-1">
+          <div className="flex items-center justify-between mb-2 md:mb-4 shrink-0">
             <h2 className="text-white font-bold text-[14px] md:text-[17px] tracking-wide">
               Recent AI Messages
             </h2>
@@ -133,6 +137,7 @@ export default function DashboardPage() {
           ) : (
             <RecentMessages messages={data!.recentMessages} />
           )}
+          </div>
         </GlassCard>
       </motion.div>
     </>

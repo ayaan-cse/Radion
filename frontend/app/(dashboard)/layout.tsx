@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       
       {/* Main Layout Grid */}
-      <div className="relative z-10 flex h-full p-3 gap-4 md:p-6 md:gap-8">
+      <div className="relative z-10 flex h-full px-4 py-4 gap-4 md:p-6 md:gap-8">
         {/* Sidebar: hidden on mobile, visible on md+ */}
         <div className="hidden md:flex">
           <Sidebar className="h-full flex-shrink-0" />

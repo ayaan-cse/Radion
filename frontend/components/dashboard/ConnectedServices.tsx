@@ -59,9 +59,9 @@ export function ConnectedServices({ connections, isLoading }: ConnectedServicesP
                 return (
                   <div
                     key={conn.platform}
-                    className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/8 shrink-0"
+                    className="flex items-center gap-1.5 bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] px-3 py-1.5 rounded-lg border border-white/5 shrink-0"
                   >
-                    <Icon className={`w-3 h-3 ${config.color} shrink-0`} />
+                    <Icon className={`w-3.5 h-3.5 ${config.color} shrink-0`} />
                     <span className="text-[11px] font-semibold text-white leading-none">
                       {config.name}
                     </span>

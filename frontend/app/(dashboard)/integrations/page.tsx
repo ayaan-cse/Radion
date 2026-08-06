@@ -1,7 +1,7 @@
 "use client";
 
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Mail, BookOpen, MessageCircle, Calendar, RefreshCw, Unplug, CheckCircle2, UserCheck, ArrowRightLeft } from "lucide-react";
+import { Mail, BookOpen, MessageCircle, Calendar, RefreshCw, Unplug, CheckCircle2, UserCheck, ArrowRightLeft, ChevronDown } from "lucide-react";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/useToast";
@@ -49,6 +49,7 @@ function IntegrationCard({
 }: IntegrationCardProps) {
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSyncClick = async () => {
     setSyncing(true);
@@ -69,20 +70,37 @@ function IntegrationCard({
   };
 
   return (
-    <GlassCard className="p-6 flex flex-col items-start relative overflow-hidden group">
+    <GlassCard className="p-4 md:p-6 flex flex-col items-start relative overflow-hidden group transition-all duration-300">
       {isConnected && (
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold tracking-wider uppercase">
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] md:text-[11px] font-bold tracking-wider uppercase z-10 pointer-events-none">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Connected</span>
+          <span className="hidden sm:block">Connected</span>
         </div>
       )}
 
-      <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center mb-4 border ${borderColor} shadow-sm group-hover:scale-105 transition-transform`}>
-        <Icon className={`w-6 h-6 ${iconColor}`} />
-      </div>
+      {/* Clickable Header Area for Expand/Collapse */}
+      <div 
+        className="w-full cursor-pointer flex flex-col relative z-0"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex justify-between items-start w-full mb-3">
+          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${bgColor} flex items-center justify-center border ${borderColor} shadow-sm group-hover:scale-105 transition-transform`}>
+            <Icon className={`w-5 h-5 md:w-6 md:h-6 ${iconColor}`} />
+          </div>
+          <button className="text-white/40 hover:text-white/80 transition-colors p-1 rounded-md mt-1 mr-12 sm:mr-0">
+            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+          </button>
+        </div>
 
-      <h3 className="text-lg font-bold text-white mb-1">{title}</h3>
-      <p className="text-sm text-white/60 mb-4 flex-1 leading-relaxed">{description}</p>
+        <h3 className="text-base md:text-lg font-bold text-white mb-1">{title}</h3>
+        
+        <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? "grid-rows-[1fr] opacity-100 mb-4" : "grid-rows-[0fr] opacity-0"}`}>
+          <div className="overflow-hidden">
+            <p className="text-[13px] md:text-sm text-white/60 leading-relaxed pb-2">{description}</p>
+          </div>
+        </div>
+        {!isExpanded && <div className="h-2"></div>}
+      </div>
 
       {isConnected ? (
         <div className="w-full flex flex-col gap-3 pt-3 border-t border-white/10 mt-auto">
@@ -209,13 +227,17 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col pt-4 overflow-y-auto custom-scrollbar pr-4">
-      <h1 className="text-2xl font-bold text-white tracking-tight mb-2">Connected Services & Integrations</h1>
-      <p className="text-sm text-white/60 mb-8 max-w-2xl">
-        Each connected service operates independently with its own Google account identity. You can connect different Gmail or Calendar accounts without logging out of Radion.
-      </p>
+    <div className="flex-1 flex flex-col pt-2 md:pt-4 overflow-y-auto custom-scrollbar px-0">
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-4 md:mb-8 gap-2">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight mb-1">Services & Integrations</h1>
+          <p className="text-[11px] md:text-sm text-white/60 max-w-2xl">
+            Each service operates independently with its own Google account identity.
+          </p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-12">
         <IntegrationCard
           id="GMAIL"
           title="Gmail"
