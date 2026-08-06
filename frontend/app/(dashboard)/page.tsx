@@ -130,6 +130,7 @@ export default function DashboardPage() {
               View all
             </button>
           </div>
+          <div className="flex-1 relative overflow-y-auto pr-2 custom-scrollbar">
           {isLoading ? (
             <EmptyState message="Loading messages..." />
           ) : data?.recentMessages.length === 0 ? (
